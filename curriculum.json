@@ -1,0 +1,798 @@
+{
+  "schemaVersion": 1,
+  "reviewStatus": "draft-requires-project-expert-review",
+  "sourcePolicy": {
+    "mode": "repository-docs-and-read-only-code",
+    "allowedRoots": [
+      "docs/projects/",
+      "docs/Functionality/",
+      "AlmanacApp/",
+      "AtlasWeb/",
+      "AlmanacTools/",
+      "AlmanacPortal/",
+      "AgenticAIIntegrations/",
+      "LicenseGeneratorService/",
+      "AtlasFileSystemWatcher/",
+      "FileComparer/",
+      "ServiceBulletinNotificationService/",
+      "Atlas.Environment.Switch/",
+      "Scripts/"
+    ],
+    "codeAccess": "read-only",
+    "excludedSources": ["Confluence", "KT recordings", "external systems"]
+  },
+  "modules": [
+    {
+      "id": "orientation",
+      "title": "Product orientation"
+    },
+    {
+      "id": "desktop-essentials",
+      "title": "Atlas desktop essentials"
+    },
+    {
+      "id": "desktop-repair",
+      "title": "Complete desktop repair journey"
+    },
+    {
+      "id": "desktop-capabilities",
+      "title": "Remaining desktop capabilities and recovery"
+    },
+    {
+      "id": "eatlas-essentials",
+      "title": "eAtlas essentials and desktop differences"
+    },
+    {
+      "id": "eatlas-capabilities",
+      "title": "eAtlas management, content, and administration"
+    },
+    {
+      "id": "connected-products",
+      "title": "How desktop and eAtlas connect"
+    },
+    {
+      "id": "supporting-services",
+      "title": "Supporting services and background pipelines"
+    },
+    {
+      "id": "capstone",
+      "title": "End-to-end evidence-based investigation"
+    }
+  ],
+  "lessons": [
+    {
+      "id": "atlas-overview",
+      "moduleId": "orientation",
+      "title": "ATLAS purpose, users, and terminology",
+      "prerequisites": [],
+      "objectives": ["Explain the purpose of ATLAS and who uses it", "Distinguish the Atlas product name from Almanac naming in code"],
+      "sources": [
+        {
+          "path": "docs/projects/01-atlas-application.md",
+          "sections": ["Purpose", "Who uses it"]
+        }
+      ],
+      "starterQuestion": "What is ATLAS, who uses it, and why does its source code say Almanac?",
+      "assessment": {
+        "id": "atlas-overview-check",
+        "question": "Explain ATLAS to a new teammate, including its users and the Atlas/Almanac naming difference.",
+        "requiredConcepts": [
+          "ATLAS supports service repair workflows for Trimble products",
+          "Authorized service technicians use the desktop application",
+          "Atlas is the product name while Almanac remains in source or assembly naming"
+        ]
+      }
+    },
+    {
+      "id": "atlas-startup-navigation",
+      "moduleId": "desktop-essentials",
+      "title": "Desktop installation, startup, and navigation",
+      "prerequisites": ["atlas-overview"],
+      "objectives": [
+        "Identify installed components and startup dependencies",
+        "Locate Product Details, My Service Cases, Dashboard, Settings, Help, and About"
+      ],
+      "sources": [
+        {
+          "path": "docs/projects/01-atlas-application.md",
+          "sections": ["Who uses it", "What Atlas does in the product", "Application structure"]
+        },
+        {
+          "path": "docs/projects/05-license-activation.md",
+          "sections": ["Purpose", "Who uses it"]
+        }
+      ],
+      "starterQuestion": "What must be installed before Atlas starts, and where does a technician begin?",
+      "assessment": {
+        "id": "atlas-startup-navigation-check",
+        "question": "Describe Atlas startup dependencies and the main desktop navigation areas.",
+        "requiredConcepts": [
+          "The installed system includes Atlas, License Activation, Reset Almanac Offline, and local MongoDB",
+          "Startup requires valid local licensing and authorizations and a running MongoDB service",
+          "Product Details identifies the unit and starts repair work; My Service Cases lists technician cases",
+          "Dashboard embeds related web views while Settings, Help, and About provide supporting functions"
+        ]
+      }
+    },
+    {
+      "id": "atlas-access-and-licensing",
+      "moduleId": "desktop-essentials",
+      "title": "Identity, Atlas seats, activation, and authorizations",
+      "prerequisites": ["atlas-startup-navigation"],
+      "objectives": [
+        "Distinguish authentication, application licensing, and product authorization",
+        "Explain activation operations and full external versus collimator capabilities"
+      ],
+      "sources": [
+        {
+          "path": "docs/projects/05-license-activation.md",
+          "sections": ["Purpose", "What it does"]
+        },
+        {
+          "path": "docs/projects/09-atlas-ems-licensing.md",
+          "sections": ["External license types (what customers buy)"]
+        }
+      ],
+      "starterQuestion": "Why can a successful sign-in still leave Atlas unavailable or a feature restricted?",
+      "assessment": {
+        "id": "atlas-access-and-licensing-check",
+        "question": "Explain the difference between signing in, licensing Atlas, and being authorized for a product.",
+        "requiredConcepts": [
+          "Trimble Identity sign-in is distinct from application-seat licensing and product authorizations",
+          "License Activation uses OData and writes local license and authorization XML consumed by desktop startup",
+          "Full external and collimator licenses expose different capabilities rather than the same repair workflow"
+        ]
+      }
+    },
+    {
+      "id": "technician-workflow",
+      "moduleId": "desktop-repair",
+      "title": "The technician workflow",
+      "prerequisites": ["atlas-access-and-licensing"],
+      "objectives": ["Describe the main stages of a technician visit", "Explain why repair activity is captured against a service case"],
+      "sources": [
+        {
+          "path": "docs/projects/01-atlas-application.md",
+          "sections": ["Core technician workflow", "What Atlas does in the product"]
+        }
+      ],
+      "starterQuestion": "What happens from identifying an instrument to completing its service case?",
+      "assessment": {
+        "id": "technician-workflow-check",
+        "question": "Describe a typical technician visit and explain the role of the service case.",
+        "requiredConcepts": [
+          "Identify the instrument and review relevant product, warranty, history, or bulletin context",
+          "Open or create a service case to capture the visit's repair activity",
+          "Perform service operations and save their results against the case before completion"
+        ]
+      }
+    },
+    {
+      "id": "service-case-details",
+      "moduleId": "desktop-repair",
+      "title": "Service-case workspace, results, and reports",
+      "prerequisites": ["technician-workflow"],
+      "objectives": [
+        "Distinguish product-level context from the open service-case workspace",
+        "Explain how operations, parts, bulletins, and reports relate to the case"
+      ],
+      "sources": [
+        {
+          "path": "docs/projects/01-atlas-application.md",
+          "sections": ["Product Details and the service case page", "Reports at case completion"]
+        }
+      ],
+      "starterQuestion": "What belongs to Product Details, what belongs to a service case, and how are reports produced?",
+      "assessment": {
+        "id": "service-case-details-check",
+        "question": "Explain how a technician records repair work and obtains the applicable case reports.",
+        "requiredConcepts": [
+          "Product Details provides unit context while the service case captures the repair visit",
+          "The case records operations, parts, and applied bulletins through its workspace and task list",
+          "Report availability depends on recorded work and report-specific conditions, and generation requires network"
+        ]
+      }
+    },
+    {
+      "id": "service-content",
+      "moduleId": "desktop-repair",
+      "title": "Desktop manuals, bulletins, downloads, and instrument constants",
+      "prerequisites": ["service-case-details"],
+      "objectives": [
+        "Locate desktop product manuals, bulletins, downloads, and instrument-constant operations",
+        "Distinguish reading a bulletin from recording its application on a case"
+      ],
+      "sources": [
+        {
+          "path": "docs/projects/01-atlas-application.md",
+          "sections": ["What Atlas does in the product", "Product Details and the service case page"]
+        }
+      ],
+      "starterQuestion": "Where does Atlas desktop expose manuals, bulletins, downloads, and instrument constants?",
+      "assessment": {
+        "id": "service-content-check",
+        "question": "Explain where service content appears and why viewing a bulletin is not the same as applying it.",
+        "requiredConcepts": [
+          "Atlas provides relevant product content and feature-gated downloads or instrument-constant operations",
+          "Desktop service manuals are product-level rather than a service-case accordion",
+          "A bulletin used for its warranty window must be applied on the task list, not merely viewed"
+        ]
+      }
+    },
+    {
+      "id": "device-plugins",
+      "moduleId": "desktop-repair",
+      "title": "Detectors, service operations, and the Almanac API",
+      "prerequisites": ["service-case-details"],
+      "objectives": [
+        "Distinguish detectors from service operations",
+        "Explain documented plugin delivery, mapping, execution, and results"
+      ],
+      "sources": [
+        {
+          "path": "docs/projects/07-almanac-api.md",
+          "sections": ["Purpose", "Why Atlas is Windows-only", "Plugin kinds", "Contract (what plugins implement)"]
+        }
+      ],
+      "starterQuestion": "How does an instrument-specific detector or operation become available inside Atlas?",
+      "assessment": {
+        "id": "device-plugins-check",
+        "question": "Explain how Atlas discovers an instrument and runs its mapped service operations.",
+        "requiredConcepts": [
+          "Detectors identify instruments while service operations perform device work",
+          "Atlas hosts Windows plugin DLLs or EXEs through the Almanac API",
+          "Installer binaries and Portal product-model mappings must align, and sync distributes the metadata",
+          "Plugin events or results are mapped into case results including pass or fail"
+        ]
+      }
+    },
+    {
+      "id": "warranty-and-support",
+      "moduleId": "desktop-repair",
+      "title": "DWCR, warranty exceptions, and internal Service-Support",
+      "prerequisites": ["service-content"],
+      "objectives": [
+        "Distinguish external warranty claims from internal repair-assistance requests",
+        "Explain the documented claim gates and case-completion outcomes"
+      ],
+      "sources": [
+        {
+          "path": "docs/projects/01-atlas-application.md",
+          "sections": ["Submit DWCR (warranty claim)", "Submit Service-Support (Salesforce / TWoD)"]
+        }
+      ],
+      "starterQuestion": "How do DWCR and Service-Support differ in eligibility, destination, and case outcome?",
+      "assessment": {
+        "id": "warranty-and-support-check",
+        "question": "Compare DWCR with Service-Support, including a documented warranty-exception path.",
+        "requiredConcepts": [
+          "DWCR is an online MTP warranty claim for eligible full external technicians, and success completes the Atlas case",
+          "A documented exception can use an applied mandatory bulletin within its grace window or a selected previous closed repair case",
+          "DWCR submission goes directly to MTP; OData stores the claim row rather than submitting the claim",
+          "Internal Service-Support creates a Salesforce repair-assistance case, requires network, and neither creates a DWCR nor completes the Atlas case"
+        ]
+      }
+    },
+    {
+      "id": "baseline-calibration",
+      "moduleId": "desktop-capabilities",
+      "title": "BCS sites, calibration, monitoring, and approval",
+      "prerequisites": ["device-plugins"],
+      "objectives": ["Explain where BCS runs and who can launch it", "Describe the calibration-site workflow and its backend"],
+      "sources": [
+        {
+          "path": "docs/projects/04-baseline-calibration-software.md",
+          "sections": ["Purpose", "Who can use it", "How it sits in Atlas", "Technician workflow (inside BCS)"]
+        }
+      ],
+      "starterQuestion": "What does BCS calibrate, who can launch it, and where does its data go?",
+      "assessment": {
+        "id": "baseline-calibration-check",
+        "question": "Describe a service provider's BCS workflow and distinguish it from ordinary case work.",
+        "requiredConcepts": [
+          "BCS launches online from Atlas Settings for service-provider companies and is not a service-case screen",
+          "SX sites use prism or DR targets while X sites use spheres",
+          "The workflow covers sites, measurements, monitoring, and calibration approval",
+          "BCS stores data through eAtlas BCS APIs into Atlas SQL rather than using OData for BCS data"
+        ]
+      }
+    },
+    {
+      "id": "bcs-notifications",
+      "moduleId": "desktop-capabilities",
+      "title": "BCS notification levels, blockage, and failsafe",
+      "prerequisites": ["baseline-calibration"],
+      "objectives": [
+        "Distinguish monitoring reminders from calibration levels",
+        "Explain documented Level 3 case-opening blockage and exceptions"
+      ],
+      "sources": [
+        {
+          "path": "docs/Functionality/bcs-notifications.md",
+          "sections": [
+            "Notification types",
+            "Daily stored procedure",
+            "Atlas desktop behaviour",
+            "Calibration failsafe (Level 3 exception)"
+          ]
+        }
+      ],
+      "starterQuestion": "When does BCS move from a reminder to blocking case creation or opening?",
+      "assessment": {
+        "id": "bcs-notifications-check",
+        "question": "Explain a Level 3 BCS alert, its effect on service-case access, and the role of failsafe.",
+        "requiredConcepts": [
+          "Calibration levels and monitoring reminders are separate notification tracks",
+          "The daily SQL procedure generates active rows that desktop consumes for alerts and restrictions",
+          "Level 3 can block create or open for affected X or SX product families",
+          "Documented failsafe exemptions or another valid local site can affect blockage; an alert alone does not establish every case is blocked"
+        ]
+      }
+    },
+    {
+      "id": "desktop-ai-assistant",
+      "moduleId": "desktop-capabilities",
+      "title": "Desktop repair assistant: availability and product context",
+      "prerequisites": ["service-content"],
+      "objectives": [
+        "Explain the documented conditions for showing the repair assistant",
+        "Describe product and manual context without introducing ingestion implementation"
+      ],
+      "sources": [
+        {
+          "path": "docs/projects/01-atlas-application.md",
+          "sections": ["Agentic AI on Product Details"]
+        }
+      ],
+      "starterQuestion": "When does the repair assistant appear, and what product context does it receive?",
+      "assessment": {
+        "id": "desktop-ai-assistant-check",
+        "question": "Explain why the desktop repair assistant may be unavailable and what context it receives.",
+        "requiredConcepts": [
+          "Availability depends on the user acknowledgment/enabled flag and applicable product, manual, serial-status, and support-date conditions",
+          "The assistant receives the current product model and classified service-manual filenames",
+          "Changing the product closes the prior session, while the same model can reuse its window",
+          "The product repair assistant is distinct from this onboarding tutor"
+        ]
+      }
+    },
+    {
+      "id": "offline-and-sync",
+      "moduleId": "desktop-capabilities",
+      "title": "Local MongoDB, offline limits, and synchronization",
+      "prerequisites": ["service-case-details"],
+      "objectives": [
+        "Explain local and server responsibilities during offline work",
+        "Distinguish cached repair activity from actions that require network"
+      ],
+      "sources": [
+        {
+          "path": "docs/projects/01-atlas-application.md",
+          "sections": ["Local MongoDB and Force Sync", "Offline mode"]
+        },
+        {
+          "path": "docs/projects/02-odata-service.md",
+          "sections": ["How Atlas talks to it"]
+        }
+      ],
+      "starterQuestion": "What can a technician do offline, and what must wait for connectivity?",
+      "assessment": {
+        "id": "offline-and-sync-check",
+        "question": "Explain what happens when connectivity drops during a repair after a successful Force Sync.",
+        "requiredConcepts": [
+          "Previously synchronized data and repair changes are held in local MongoDB",
+          "Cached case editing can continue and local changes synchronize through OData when connectivity returns",
+          "Case completion, DWCR submission, report generation, Service-Support submission, and synchronization require network"
+        ]
+      }
+    },
+    {
+      "id": "installation-and-recovery",
+      "moduleId": "desktop-capabilities",
+      "title": "Installed components, recovery risks, and environment boundaries",
+      "prerequisites": ["offline-and-sync", "atlas-access-and-licensing"],
+      "objectives": [
+        "Identify installed Atlas components and documented startup dependencies",
+        "Distinguish local database reset from internal environment switching and their risks"
+      ],
+      "sources": [
+        {
+          "path": "docs/projects/01-atlas-application.md",
+          "sections": ["Application structure", "Runtime and integrations"]
+        },
+        {
+          "path": "docs/projects/05-license-activation.md",
+          "sections": ["Who uses it"]
+        },
+        {
+          "path": "docs/projects/06-reset-almanac-offline.md",
+          "sections": ["Purpose", "What it does not do"]
+        },
+        {
+          "path": "docs/projects/16-atlas-environment-switch.md",
+          "sections": ["Why it exists", "Who uses it", "What it does"]
+        }
+      ],
+      "starterQuestion": "What does Atlas install, and how do reset and environment switching differ?",
+      "assessment": {
+        "id": "installation-and-recovery-check",
+        "question": "Explain installed startup dependencies and compare local reset with environment switching safely.",
+        "requiredConcepts": [
+          "The installed system includes Atlas, License Activation, Reset Almanac Offline, and local MongoDB",
+          "Startup depends on valid local licensing and authorizations and a running MongoDB service",
+          "Reset drops local data, risks unsynchronized work, preserves license files, and requires later sync to rebuild",
+          "Environment Switch is internal-only and changes endpoint overlays, clears license/authorization files, and drops local data; field technician installs stay on production",
+          "The available documentation does not establish a complete installer build or deployment procedure"
+        ]
+      }
+    },
+    {
+      "id": "eatlas-overview",
+      "moduleId": "eatlas-essentials",
+      "title": "eAtlas purpose, users, sign-in, and desktop differences",
+      "prerequisites": ["installation-and-recovery", "bcs-notifications", "desktop-ai-assistant", "warranty-and-support"],
+      "objectives": [
+        "Explain who uses eAtlas and how users sign in",
+        "Contrast browser management/content work with desktop instrument repair"
+      ],
+      "sources": [
+        {
+          "path": "docs/projects/03-eatlas.md",
+          "sections": ["Purpose", "Who uses it", "What the web app does"]
+        },
+        {
+          "path": "docs/projects/01-atlas-application.md",
+          "sections": ["Purpose", "What Atlas does in the product"]
+        }
+      ],
+      "starterQuestion": "Who uses eAtlas, how do they sign in, and how does it differ from Atlas desktop?",
+      "assessment": {
+        "id": "eatlas-overview-check",
+        "question": "Introduce eAtlas to a technician who already knows Atlas desktop.",
+        "requiredConcepts": [
+          "eAtlas is a browser application for service managers and other authorized company users",
+          "Sign-in uses Trimble Identity rather than the Almanac OData session token",
+          "Web work includes company cases, licenses, assignment, and content; desktop hosts instrument repair and Windows operations",
+          "Atlas can embed eAtlas Dashboard views, but the web application does not replace desktop instrument operations"
+        ]
+      }
+    },
+    {
+      "id": "eatlas-management",
+      "moduleId": "eatlas-capabilities",
+      "title": "eAtlas manager workflow and case assignment",
+      "prerequisites": ["eatlas-overview"],
+      "objectives": ["Explain company-level case and license visibility", "Describe how manager assignment reaches the technician"],
+      "sources": [
+        {
+          "path": "docs/projects/03-eatlas.md",
+          "sections": ["Purpose", "How it connects to Atlas", "What the web app does", "Shared SQL database"]
+        },
+        {
+          "path": "docs/projects/02-odata-service.md",
+          "sections": ["What it serves"]
+        }
+      ],
+      "starterQuestion": "How does assigning a case in eAtlas affect the technician's Atlas case list?",
+      "assessment": {
+        "id": "eatlas-management-check",
+        "question": "Describe a manager assigning a company case and explain how the technician sees that assignment.",
+        "requiredConcepts": [
+          "eAtlas provides company service-case views and assignment for authorized users",
+          "Assignment updates the shared Atlas SQL case data and becomes visible on desktop load or sync",
+          "Assignment can be training-restricted, and OData preserves manager assignment during desktop updates"
+        ]
+      }
+    },
+    {
+      "id": "eatlas-content",
+      "moduleId": "eatlas-capabilities",
+      "title": "eAtlas content, company licenses, users, roles, and authorizations",
+      "prerequisites": ["eatlas-management", "service-content"],
+      "objectives": [
+        "Locate web service content and company administration surfaces",
+        "Distinguish web visibility from desktop activation and recorded case work"
+      ],
+      "sources": [
+        {
+          "path": "docs/projects/03-eatlas.md",
+          "sections": ["Purpose", "What the web app does", "Secondary API for Atlas desktop"]
+        }
+      ],
+      "starterQuestion": "What content and administration features does eAtlas provide beyond case assignment?",
+      "assessment": {
+        "id": "eatlas-content-check",
+        "question": "Describe eAtlas content and company administration and contrast them with desktop actions.",
+        "requiredConcepts": [
+          "Web content includes manuals, bulletins, general service information, downloads, labor time guidance, and instrument constants",
+          "Company surfaces include license visibility, user administration, roles, and product/training authorizations",
+          "Available content and operations depend on modules, roles, and applicable authorization rather than universal access",
+          "Viewing licenses on the web is not desktop machine activation, and viewing a bulletin does not record its application on a repair case"
+        ]
+      }
+    },
+    {
+      "id": "atlas-eatlas-architecture",
+      "moduleId": "connected-products",
+      "title": "ATLAS, OData, and eATLAS responsibilities",
+      "prerequisites": ["eatlas-management", "eatlas-content", "offline-and-sync"],
+      "objectives": [
+        "Distinguish desktop, primary backend, and web application responsibilities",
+        "Explain the role of local MongoDB and the shared SQL catalog"
+      ],
+      "sources": [
+        {
+          "path": "docs/projects/01-atlas-application.md",
+          "sections": ["What Atlas does in the product"]
+        },
+        {
+          "path": "docs/projects/02-odata-service.md",
+          "sections": ["Purpose", "Who uses it", "How Atlas talks to it"]
+        },
+        {
+          "path": "docs/projects/03-eatlas.md",
+          "sections": ["Purpose", "How it connects to Atlas"]
+        }
+      ],
+      "starterQuestion": "How do ATLAS desktop, OData, eATLAS, local MongoDB, and SQL fit together?",
+      "assessment": {
+        "id": "atlas-eatlas-architecture-check",
+        "question": "Explain the responsibilities of ATLAS desktop, OData, and eATLAS, including where local and shared data fit.",
+        "requiredConcepts": [
+          "ATLAS desktop supports technician repair workflows",
+          "OData is the primary desktop backend",
+          "eATLAS serves service managers and also provides embedded views or selected secondary desktop APIs",
+          "Local MongoDB supports offline work",
+          "OData and eATLAS use the same Atlas SQL catalog"
+        ]
+      }
+    },
+    {
+      "id": "master-data-sync",
+      "moduleId": "supporting-services",
+      "title": "Salesforce/TWoD master data and desktop distribution",
+      "prerequisites": ["atlas-eatlas-architecture"],
+      "objectives": [
+        "Identify the upstream owner of catalog and organization data",
+        "Trace incremental master-data distribution to Atlas clients"
+      ],
+      "sources": [
+        {
+          "path": "docs/projects/08-atlas-twod-master-data-sync.md",
+          "sections": ["Purpose", "Who uses it", "What is synced", "How a run works"]
+        },
+        {
+          "path": "docs/projects/01-atlas-application.md",
+          "sections": ["Local MongoDB and Force Sync"]
+        }
+      ],
+      "starterQuestion": "Where does Atlas catalog data originate, and how does it reach a technician PC?",
+      "assessment": {
+        "id": "master-data-sync-check",
+        "question": "Trace a product-catalog update from its upstream source to the desktop.",
+        "requiredConcepts": [
+          "Salesforce/TWoD supplies master data rather than Atlas creating the catalog itself",
+          "The daily incremental sync writes Atlas SQL using per-domain synchronization watermarks",
+          "OData distributes the resulting catalog through desktop sync into local MongoDB",
+          "Master-data ingest and desktop transaction synchronization are different stages"
+        ]
+      }
+    },
+    {
+      "id": "ems-licensing",
+      "moduleId": "supporting-services",
+      "title": "EMS back-office flow for Atlas application seats",
+      "prerequisites": ["atlas-eatlas-architecture", "atlas-access-and-licensing", "eatlas-content"],
+      "objectives": [
+        "Trace purchased external seats from Oracle through EMS to Atlas activation",
+        "Distinguish current external-seat provisioning from legacy and internal licensing"
+      ],
+      "sources": [
+        {
+          "path": "docs/projects/09-atlas-ems-licensing.md",
+          "sections": ["Old path vs new path", "External license types (what customers buy)", "End-to-end: buy \u2192 run Atlas"]
+        }
+      ],
+      "starterQuestion": "How does a purchased Atlas seat become an activation code and a working desktop license?",
+      "assessment": {
+        "id": "ems-licensing-check",
+        "question": "Trace the external Atlas-seat flow and distinguish it from internal and instrument licensing.",
+        "requiredConcepts": [
+          "Oracle orders reach EMS entitlements through middleware",
+          "Atlas EMS integration creates an activation code and Atlas SQL records, while OData licensing provisions or binds the external seat",
+          "License Activation obtains signed local license/authorization files; EMS is not the desktop UI",
+          "New purchased external seats use EMS, Poseidon is legacy, and internal licenses are Atlas-issued",
+          "These are Atlas application seats rather than temporary instrument service keys"
+        ]
+      }
+    },
+    {
+      "id": "instrument-service-licenses",
+      "moduleId": "supporting-services",
+      "title": "Temporary instrument service licenses",
+      "prerequisites": ["atlas-access-and-licensing", "device-plugins"],
+      "objectives": [
+        "Separate instrument service keys from Atlas application seats",
+        "Explain the authorization and OKWS responsibility boundaries"
+      ],
+      "sources": [
+        {
+          "path": "docs/projects/10-license-generator-service.md",
+          "sections": ["Why it exists (Hardware as a Service)", "What this service does vs what it does not", "Who uses it", "Flow"]
+        }
+      ],
+      "starterQuestion": "How does an instrument service license differ from the license needed to run Atlas?",
+      "assessment": {
+        "id": "instrument-service-licenses-check",
+        "question": "Describe the temporary instrument service-license flow and distinguish it from EMS seats.",
+        "requiredConcepts": [
+          "Instrument service licenses enable temporary device service capabilities or controlled serial changes, not Atlas desktop seats",
+          "License Generator Service checks identity and product authorization and forwards requests to OKWS",
+          "OKWS issues the key; Atlas or its plugin applies it rather than inventing the key",
+          "The instrument returns to its purchased configuration after the temporary service override"
+        ]
+      }
+    },
+    {
+      "id": "instrument-constants-pipeline",
+      "moduleId": "supporting-services",
+      "title": "Instrument constants: upload, comparison, and archive",
+      "prerequisites": ["master-data-sync", "service-content"],
+      "objectives": [
+        "Explain the separate watcher and comparer responsibilities",
+        "Describe success and mismatch outcomes without confusing constants with catalog data"
+      ],
+      "sources": [
+        {
+          "path": "docs/projects/11-atlas-file-system-watcher.md",
+          "sections": ["Why it exists", "What it does"]
+        },
+        {
+          "path": "docs/projects/12-file-comparer.md",
+          "sections": ["Why it exists", "What it does"]
+        }
+      ],
+      "starterQuestion": "Why are both File System Watcher and File Comparer needed for instrument constants?",
+      "assessment": {
+        "id": "instrument-constants-pipeline-check",
+        "question": "Trace an instrument-constant file from the share through verification and describe a mismatch.",
+        "requiredConcepts": [
+          "Watcher maps files with sorting rules, uploads through eAtlas to S3, and moves successes to Uploaded",
+          "Comparer runs afterward, downloads the cloud copy, and compares file bytes",
+          "Matches move to Archived while mismatches remain in Uploaded with logging and notification",
+          "Instrument-constant file processing is distinct from Salesforce master-data ingest"
+        ]
+      }
+    },
+    {
+      "id": "bulletin-email-notifications",
+      "moduleId": "supporting-services",
+      "title": "Service-bulletin email notifications",
+      "prerequisites": ["master-data-sync", "service-content"],
+      "objectives": ["Explain the dependency on TWoD bulletin ingest", "Describe recipient filtering and duplicate-mail tracking"],
+      "sources": [
+        {
+          "path": "docs/projects/13-service-bulletin-notification.md",
+          "sections": ["Why it exists", "What it does", "Relation to other docs"]
+        }
+      ],
+      "starterQuestion": "Why might a new bulletin appear in Atlas but not produce an email for every user?",
+      "assessment": {
+        "id": "bulletin-email-notifications-check",
+        "question": "Explain how the bulletin mailer chooses new content and eligible recipients.",
+        "requiredConcepts": [
+          "The mailer reads SQL notifications after TWoD ingest rather than fetching Salesforce itself",
+          "Recipient selection depends on active subscription and applicable company/product authorization",
+          "Watermarks and per-user mailing status identify new work and avoid already-sent bulletins",
+          "Email delivery is separate from desktop visibility, BCS alerts, and AI knowledge-base synchronization"
+        ]
+      }
+    },
+    {
+      "id": "ai-knowledge-sync",
+      "moduleId": "supporting-services",
+      "title": "Manual and bulletin ingestion for the repair assistant",
+      "prerequisites": ["master-data-sync", "service-content"],
+      "objectives": [
+        "Distinguish manual-upload and bulletin-ingest triggers",
+        "Explain asynchronous knowledge synchronization and desktop assistant context"
+      ],
+      "sources": [
+        {
+          "path": "docs/projects/14-atlas-ai-sync-service.md",
+          "sections": ["Why it exists", "Two document types", "High-level flow"]
+        },
+        {
+          "path": "docs/projects/01-atlas-application.md",
+          "sections": ["Agentic AI on Product Details"]
+        }
+      ],
+      "starterQuestion": "How do manuals and bulletins reach the repair assistant, and why can updates take time?",
+      "assessment": {
+        "id": "ai-knowledge-sync-check",
+        "question": "Compare manual and bulletin synchronization and explain their relationship to desktop AI chat.",
+        "requiredConcepts": [
+          "Successful manual create or replace in eAtlas triggers asynchronous manual ingest",
+          "Bulletins synchronize after TWoD into a separate library, including removal of deactivated bulletins",
+          "Synchronization is eventually consistent, and manual deletion is not wired from eAtlas",
+          "Desktop assistant context includes the product model and manual filenames; the product repair assistant is not the onboarding tutor"
+        ]
+      }
+    },
+    {
+      "id": "global-service-boundaries",
+      "moduleId": "supporting-services",
+      "title": "Atlas Global Service and external consumers",
+      "prerequisites": ["service-case-details", "instrument-service-licenses"],
+      "objectives": [
+        "Distinguish Global Service from the desktop backend",
+        "Explain its documented external-team use cases without generalizing access rules"
+      ],
+      "sources": [
+        {
+          "path": "docs/projects/15-atlas-global-service.md",
+          "sections": ["Why it exists", "Who uses it", "Endpoints", "Flow"]
+        }
+      ],
+      "starterQuestion": "Why does Atlas Global Service exist alongside OData and eAtlas?",
+      "assessment": {
+        "id": "global-service-boundaries-check",
+        "question": "Explain Global Service consumers and distinguish its warranty lookup from claim submission.",
+        "requiredConcepts": [
+          "Global Service gives other Trimble teams focused access to Atlas facts rather than serving the desktop repair workflow",
+          "Its documented use cases include calibration PDFs, recent closed-case lookup, and a Sentinel user/open-case check",
+          "The warranty endpoint looks up case facts; it does not submit DWCR or issue instrument service keys",
+          "The documentation describes route-specific authentication rather than a uniform TID requirement for every endpoint"
+        ]
+      }
+    },
+    {
+      "id": "documentation-investigation",
+      "moduleId": "capstone",
+      "title": "Capstone: trace a repair and investigate a failure with repository evidence",
+      "prerequisites": [
+        "warranty-and-support",
+        "bcs-notifications",
+        "instrument-constants-pipeline",
+        "bulletin-email-notifications",
+        "ai-knowledge-sync",
+        "ems-licensing",
+        "installation-and-recovery",
+        "global-service-boundaries"
+      ],
+      "objectives": [
+        "Connect the product journey to documented service and data boundaries",
+        "Distinguish supported explanations from hypotheses and missing evidence"
+      ],
+      "sources": [
+        {
+          "path": "docs/projects/01-atlas-application.md",
+          "sections": ["Core technician workflow", "Offline mode", "Submit DWCR (warranty claim)"]
+        },
+        {
+          "path": "docs/projects/02-odata-service.md",
+          "sections": ["How Atlas talks to it", "Shared SQL database"]
+        },
+        {
+          "path": "docs/projects/03-eatlas.md",
+          "sections": ["How it connects to Atlas"]
+        },
+        {
+          "path": "docs/Functionality/bcs-notifications.md",
+          "sections": ["Atlas desktop behaviour", "Calibration failsafe (Level 3 exception)"]
+        }
+      ],
+      "starterQuestion": "How would you explain a repair end to end and investigate a blocked step using documentation and read-only source code?",
+      "assessment": {
+        "id": "documentation-investigation-check",
+        "question": "Trace an illustrative repair across desktop, local and shared stores, and services. Explain a blocked step with repository evidence and one explicit evidence gap.",
+        "requiredConcepts": [
+          "The repair journey connects instrument identification, case activity, and an eligible completion or claim path",
+          "The trace distinguishes local MongoDB, primary OData, eAtlas/shared SQL, and direct MTP DWCR submission",
+          "A network-loss or BCS Level 3 example explains the applicable documented restriction without claiming a proven runtime diagnosis",
+          "The explanation cites document sections and any inspected code paths or symbols, labels hypotheses, identifies missing evidence, and does not modify or execute product code or access external systems"
+        ]
+      }
+    }
+  ]
+}
