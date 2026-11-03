@@ -1,249 +1,246 @@
-# Atlas onboarding: optional local package
+# Atlas Onboarding
 
-Private, local-only onboarding for an existing Atlas checkout. No MCP, cloud
-deployment, database server, or third-party Python packages are required.
+**ATLAS Tutor** is a VS Code GitHub Copilot agent for learning Atlas and eAtlas.
+It guides learners through repository-based explanations, suggests follow-up
+questions, and saves learning progress so they can continue in a later chat.
 
-The package contains 25 draft lessons in nine modules, a Copilot tutor, validated
-SQLite coverage tracking, and a reversible installer. Teaching uses starter
-questions and explanations, without required quizzes or assessments. An optional
-`/quiz` skill provides a five-question warm-up with fun marks. Project-expert review is
-required before official use. The curriculum was copied from the current local
-Atlas onboarding draft; it is not a verified match for every Atlas revision.
+This repository contains the tutor agent, a 25-topic curriculum across nine
+modules, an optional quiz skill, and Python scripts for installation and SQLite
+progress tracking.
+
+## What the tutor provides
+
+- A syllabus covering Atlas desktop, eAtlas, connected products, and supporting services.
+- Starter questions and explanations grounded in the Atlas checkout's documentation and source code.
+- Follow-up questions for exploring each topic in more detail.
+- Topic coverage recorded only after the learner says `Done` or `Next`.
+- Saved learning summaries, unfinished topics, next steps, and open questions.
+- Read-only revisits of previously covered material.
+- An optional five-question `/quiz` warm-up using clickable answers.
+
+The tutor reads product sources but does not modify or run product code.
+Lessons are drafts requiring project-expert review; coverage records learning
+activity, not certification or proof of mastery.
+
+## Curriculum
+
+| Module | Focus |
+|---|---|
+| 1 | Product orientation |
+| 2 | Atlas desktop essentials |
+| 3 | Complete desktop repair journey |
+| 4 | Remaining desktop capabilities and recovery |
+| 5 | eAtlas essentials and desktop differences |
+| 6 | eAtlas management, content, and administration |
+| 7 | How desktop and eAtlas connect |
+| 8 | Supporting services and background pipelines |
+| 9 | End-to-end evidence-based investigation |
+
+[curriculum.json](./curriculum.json) defines the lessons, starter questions,
+objectives, prerequisites, and source references. Earlier modules and explicit
+prerequisites determine which topic is eligible next. Source references must
+be checked against the Atlas revision being used.
+
+## Repository structure
+
+| Path | Purpose |
+|---|---|
+| [atlas-onboarding-local.agent.md](./atlas-onboarding-local.agent.md) | ATLAS Tutor agent definition and activation boundaries |
+| [tutor.md](./tutor.md) | Teaching workflow, saving rules, and CLI payloads |
+| [curriculum.json](./curriculum.json) | Curriculum and repository source references |
+| [skills/quiz/SKILL.md](./skills/quiz/SKILL.md) | Optional warm-up quiz workflow |
+| [scripts/install.py](./scripts/install.py) | Install, update, and remove managed tutor files |
+| [scripts/onboarding.py](./scripts/onboarding.py) | Validate and persist learner progress in SQLite |
+| [tests/test_onboarding.py](./tests/test_onboarding.py) | Installer, curriculum, and progress-tracking tests |
+| [VERSION](./VERSION) | Package version recorded during installation |
 
 ## Requirements
 
-- Windows, Git, Python 3.10+, and VS Code with company-approved Copilot access.
-- A local Atlas Git checkout containing root `Atlas.sln`.
-- Permission for the tutor to run the local Python CLI. If execution is denied,
-  teaching can continue without persistence.
-- Company-approved private hosting and access controls before publishing this
-  repository. No remote repository is created by these scripts.
+- Windows with Git and Python 3.10+.
+- VS Code with company-approved GitHub Copilot access.
+- An Atlas Git checkout with `Atlas.sln` at the repository root.
+- Permission for the agent to read the checkout and execute the local Python CLI.
+
+The Python scripts use only the standard library, including `sqlite3`.
+If command execution is denied, tutoring can continue without saved progress.
+Visual Studio and Cursor integrations are not included.
 
 ## Install
 
-Clone this package beside Atlas, not inside it. From PowerShell:
+From a parent directory outside the Atlas checkout, clone this repository and
+enter its folder:
 
 ```powershell
-python C:\atlas-onboarding\scripts\install.py install --atlas <project_directory>
+git clone https://github.com/ahalya-trimble/atlas-onboarding.git
+Set-Location .\atlas-onboarding
 ```
 
-The installer adds only:
+Run the installer, replacing the example Atlas path with your checkout:
 
-- `.github/agents/atlas-onboarding-local.agent.md`: **ATLAS Tutor**.
-- `.github/skills/quiz/SKILL.md`: user-triggered **/quiz** warm-up.
-- `.atlas-onboarding/`: workflow, curriculum, CLI, package version, and ownership manifest.
-- A managed block in Git's local `info/exclude`, including all `.onboarding/` data.
+```powershell
+python .\scripts\install.py install --atlas '<ATLAS_CHECKOUT_PATH>'
+```
 
-It does not change shared `.gitignore`, existing agents, or product files. It
-refuses tracked targets, existing unowned files, modified managed files,
-conflicting shared onboarding policies, linked paths, and concurrent installers.
-File contents are read back before installation reports success. Recoverable
-filesystem errors roll back files already changed; power loss is not transactional.
+Replace `<ATLAS_CHECKOUT_PATH>` with the absolute path to your Atlas checkout.
 
-The installer does not change shared policy. A maintainer must explicitly allow
-this optional SQLite workflow if existing instructions prohibit its local writes.
-Merely adding a new agent cannot override higher-priority instructions.
+The installer adds these files to the Atlas checkout:
 
-After a successful installation, reload VS Code if needed, select **ATLAS Tutor**,
-and say `Hi` or `Start ATLAS onboarding`. Selecting the agent alone does not
-trigger a response. Returning learners can say `Hi` or `Continue` for a saved
-recap and choices to continue, revisit a topic, or view progress.
-
-Tutor behavior is limited to the explicitly selected **ATLAS Tutor** agent.
-The default **Agent** should answer normally, including after switching away
-from tutoring in the same chat. A greeting or attached curriculum does not
-activate onboarding. Automatic invocation of the tutor by other agents is disabled.
-The quiz checks the selected agent before reading the guide or learner data.
-These are instruction boundaries, not filesystem access controls: other agents
-can still inspect tutor files for an explicit coding or maintenance task.
-If default Agent still starts onboarding after updating and starting a fresh
-chat, check shared workspace/user instructions or other installed onboarding
-agents for conflicting greeting rules; the installer does not change those files.
-
-Say `Revisit` to get an explanation of what you have covered so far, followed
-by key takeaways and an example for the most recently covered topic. Name a
-topic to revisit it specifically. The tutor uses saved notes and current
-sources, not just a "checkpoint verified" message. Revisit and its follow-up
-questions do not save duplicate checkpoints or change your learning position.
-Say `Continue` to return to the original unfinished topic. Revisit notes are
-saved only if you explicitly request it, without changing that continuation point.
-
-Choose a starter question to get an explanation, not a quiz. Say `Done` to mark
-the explained topic covered and see the next starter, or `Next` to mark it
-covered and continue to the next explanation. Covered does not mean assessed
-or certified.
-
-On their first visit, learners see "Welcome to ATLAS Tutor! Let's explore Atlas
-step by step." followed immediately by **What you will learn** with an ASCII
-syllabus tree showing all nine modules in learning order and their main topics.
-The diagram works in plain chat without Mermaid rendering and appears before
-the saving notice, product introduction, usage guide, and starter questions.
-It is followed by **How to use this tutor**, which explains starter
-questions, follow-up suggestions, Done/Next, saving progress, and returning
-later. Say `Show syllabus` or `Help` to see these again without changing progress.
-Returning learners see their saved recap rather than the full welcome.
-
-`Show progress` lists covered topics, unfinished learning, and what comes next.
-Legacy review schedules and "No reviews due" messages are not shown. Revisit
-and `/quiz` remain optional and available without due dates; historical data
-is preserved.
-
-The complete welcome, diagram, and starter questions belong in the final visible
-reply, not only inside VS Code's collapsed steps. Saving must not replace the
-learning content with a status message. A welcome or starter menu alone does
-not create a learning-session checkpoint; actual topic teaching does.
-
-New learners then see a **Start here** list with three curriculum starter questions
-(S1-S3), with the first recommended. Reply with a label or copy a question;
-you do not need to know its answer. After each explanation or follow-up, the
-tutor shows **You can ask next** with two or three specific question ideas
-(Q1-Q3). Select one for more detail, or ask your own question. These are chat
-suggestions, not quizzes or clickable UI buttons, and selecting one does not
-mark a topic covered.
-
-## Optional warm-up: /quiz
-
-Select **ATLAS Tutor** and enter `/quiz` after covering a topic. It asks five
-questions, one at a time, using clickable multiple-choice options. Questions
-come only from verified previously covered material, not future topics.
-Each correct answer earns one mark; the final score is shown as `X/5`.
-Correct answers are spread across all four option positions, with one position
-used twice and no adjacent repeats. The answer stays tied to its option text
-when choices are reordered; the position plan is not shown to the learner.
-Feedback explains each answer. This is just for fun, not an assessment of
-employee performance or a requirement for continuing onboarding.
-
-Scores, answers, and quiz explanations stay in chat and are not written to the
-progress database. Coverage, existing notes, and your original continuation
-point remain unchanged. You can stop anytime; an interrupted quiz shows only
-the score out of answered questions, labelled incomplete.
-
-The agent lists `ask_user` (the structured question form used by SDK hosts) and
-VS Code's `vscode/askQuestions`. The quiz discovers the actual runtime tool and
-uses its own input schema; listing names does not install or guarantee tools.
-A missing VS Code tool does not prevent using an exposed `ask_user` form.
-Host-supplied active ATLAS Tutor instructions establish activation; the model
-does not need to see the agent picker. Merely reading the agent file does not
-activate it. If neither question tool is exposed, the quiz explains the
-limitation and does not start. Denied or failed calls are reported explicitly. It never
-falls back to typed A/B/C/D or Markdown links pretending to be buttons.
-If there is not enough verified covered material for five distinct questions,
-the tutor suggests learning more first. Skill discovery and the question UI
-must be checked in your VS Code session; static tests cannot prove them.
-Skills are workspace-discoverable; invoking `/quiz` under another agent asks
-you to select ATLAS Tutor first, without starting the quiz.
-
-## Local learner data
-
-The tutor shows a first-use notice instead of asking Track/Skip:
-
-**"Your learning progress and summaries are saved automatically on this computer
-so you can continue later. No name or email is required. Please do not share
-sensitive information."**
-
-Starting learning creates `.onboarding/onboarding.db` after the notice.
-The tutor automatically saves detailed learning summaries, current topic,
-next step, and requested open questions after explanations and follow-ups;
-read-only revisits are excluded unless you ask to save notes, and optional
-quizzes never write learner data. It does not save
-an entire chat transcript. Existing records remain intact.
-It records coverage only when you say `Done` or `Next`. You do not
-need to request a save before switching agents. Denied or failed writes are
-reported as UNSAVED, not remembered progress.
-
-Reads alone create no file. Workspace policy and tool approvals still apply.
-If saving is blocked or you explicitly ask not to save, learning continues in
-chat without further writes or deletion of existing records. The same chat
-can use its conversation context; reliable cross-chat recall of unsaved work
-is unavailable. Learners do not need to open or edit the database.
-
-The database contains:
-
-| Table | Purpose |
+| Installed path | Purpose |
 |---|---|
-| `learner` | Single-learner initialization marker, creation date, and optimistic revision; legacy `consent` field retained for compatibility, not evidence of an explicit agreement |
-| `topics` | Topic status, coverage or historical assessment result, last event, and curriculum evidence signature |
-| `attempts` | Coverage summaries, Done/Next confirmation, source paths/revision, and timestamp; historical assessments are retained |
-| `sessions` | Append-only session summaries, current topic, next step, and open questions |
-| `reviews` | Historical review schedules, retained for compatibility; no new quizzes are scheduled |
+| `.github/agents/atlas-onboarding-local.agent.md` | Selectable ATLAS Tutor agent |
+| `.github/skills/quiz/SKILL.md` | Optional `/quiz` skill |
+| `.atlas-onboarding/` | Python CLI, curriculum, workflow, version, and ownership manifest |
 
-Curriculum JSON remains the only source of lesson definitions. The database
-stores learner state, not a second editable curriculum. There is no numeric score,
-AI grading, or employee evaluation. Coverage records learner-confirmed progress,
-not proof of understanding. Assessment definitions and the old `record-attempt`
-command remain only for compatibility with previous installations.
+It also adds a managed block to Git's local `info/exclude` to exclude installed
+files and learner data from ordinary commits. It does not modify the shared
+`.gitignore`, existing agents, or product files.
 
-Coverage writes validate Done/Next confirmation, actual source paths, earlier
-modules, and explicit prerequisites. Coverage events and progress commit together
-without generating assessment answers or review schedules. Each write checks
-the expected revision and reads back the
-committed payload. An identical ID/payload retry is idempotent; a conflicting
-retry or stale writer fails explicitly.
+The installer refuses tracked targets, existing unowned files, modified managed
+files, linked paths, and concurrent installations. It verifies written content
+and rolls back applied file changes on recoverable filesystem errors.
+Installation is not transactional across power loss.
 
-Local data is unencrypted and not synchronized or backed up automatically.
-Git exclusion prevents ordinary accidental staging, not deliberate force-adding
-or filesystem access. Do not store credentials, customer details, employee names,
-or other sensitive information. Use one learner per checkout.
+Existing workspace instructions still apply. If shared policy prohibits SQLite
+onboarding writes, a maintainer must permit the workflow before installation.
 
-## CLI
+## Start learning
 
-The installed workflow in [tutor.md](./tutor.md) documents exact write payloads.
-Commands return JSON; errors go to stderr with exit code 1.
+1. Open the Atlas checkout in VS Code and reload the window if needed.
+2. Select **ATLAS Tutor** in Copilot Chat.
+3. Send `Hi` or `Start ATLAS onboarding`.
+4. Review the syllabus and choose a starter question.
+
+The first response introduces the syllabus, explains saving, and offers three
+starter questions labelled S1-S3. Choose a label or ask your own question; the
+tutor explains the answer rather than asking you to answer it.
+
+After an explanation, suggested follow-up questions appear as Q1-Q3. These
+labels are chat suggestions, not quiz buttons, and do not mark a topic covered.
+
+| Message | Behavior |
+|---|---|
+| `S1`, `Q1`, or your own question | Explain the selected topic or follow-up |
+| `Done` | Mark the explained topic covered and offer the next starter |
+| `Next` | Mark the explained topic covered and continue to the next explanation |
+| `Continue` | Resume saved unfinished learning |
+| `Show progress` | Show covered topics, unfinished learning, and the next eligible topic |
+| `Revisit` or `Revisit <topic>` | Explain previously covered material without changing the continuation point |
+| `Show syllabus` or `Help` | Show the learning outline or usage guide without advancing progress |
+| `Stop onboarding` | Stop tutoring without inventing completion or silently saving |
+
+Select ATLAS Tutor before returning with `Hi` or `Continue` in a new chat.
+Selecting the agent alone does not start learning. Switching to another agent
+ends the tutor workflow; ordinary greetings under the default Agent must not
+activate onboarding.
+
+## Optional quiz
+
+While ATLAS Tutor is selected, enter `/quiz` after covering a topic.
+The warm-up asks five questions from verified previously covered material,
+using clickable multiple-choice answers. Each correct answer earns one mark,
+with a final score of `X/5` and short explanations.
+
+Quiz questions, answers, scores, and explanations stay in chat. They do not
+change coverage, saved notes, or the original continuation point. Quizzes are
+optional and never block learning.
+
+The quiz requires a supported structured question tool exposed by the host
+(`ask_user` or `vscode/askQuestions`, including its runtime alias).
+If no supported tool or sufficient covered material is available, it does not
+start. It never substitutes typed A/B/C/D answers for clickable questions.
+
+## Progress tracking
+
+The tutor displays a saving notice before initializing storage or making the
+first learner-data write in a conversation:
+
+> Your learning progress and summaries are saved automatically on this computer
+> so you can continue later. No name or email is required. Please do not share
+> sensitive information.
+
+Progress is stored at `.onboarding/onboarding.db` inside the Atlas checkout.
+Reading progress alone does not create a database.
+
+Meaningful explanations and follow-ups save session summaries automatically.
+A welcome or starter menu alone does not create a session checkpoint.
+Coverage is recorded only after `Done` or `Next`. Revisits remain read-only
+unless the learner explicitly asks to save notes; quizzes never write progress.
+
+| Table | Stored information |
+|---|---|
+| `learner` | Single-learner initialization, creation time, and write revision |
+| `topics` | Current topic status, latest event, and curriculum evidence signature |
+| `attempts` | Coverage events and retained historical assessment records |
+| `sessions` | Append-only summaries, current topic, next step, and open questions |
+| `reviews` | Historical review schedules retained for compatibility |
+
+Writes validate prerequisites and source evidence, check the expected revision,
+commit related progress changes together, and verify the saved payload.
+Curriculum changes can invalidate completion eligibility without erasing history.
+Curriculum signatures do not establish whether product sources are unchanged;
+the tutor must inspect those sources again.
+
+Use one learner per Atlas checkout. Data is unencrypted and does not synchronize
+or back up automatically. Do not include credentials, employee identifiers,
+customer information, or other sensitive content. Git exclusions prevent ordinary
+accidental staging, not deliberate force-adding or filesystem access.
+
+If saving fails, is denied, or is explicitly declined, the tutor reports
+**UNSAVED** and continues chat-only without deleting existing records or claiming
+cross-chat recall of unsaved work.
+
+## Update or remove
+
+From this repository's root, after updating the package checkout, update the
+installed tutor using the same Atlas checkout path:
 
 ```powershell
-python C:\atlas_v2.0\.atlas-onboarding\onboarding.py --atlas C:\atlas_v2.0 get-progress
-python C:\atlas_v2.0\.atlas-onboarding\onboarding.py --atlas C:\atlas_v2.0 next-topic
-# After showing the saving notice, only when storage is missing:
-python C:\atlas_v2.0\.atlas-onboarding\onboarding.py --atlas C:\atlas_v2.0 init
+python .\scripts\install.py update --atlas '<ATLAS_CHECKOUT_PATH>'
 ```
 
-`record-coverage` and `save-session` accept JSON on stdin. The tutor uses these
-commands; learners do not need to type payloads. Safe command quoting and explicit
-execution permission remain necessary without MCP. No background process runs.
-The old `init --consent` spelling is still accepted for compatibility but is
-not required. Database schema and existing saved history are unchanged.
-
-## Update and remove
-
-Update the package checkout, then:
+Remove the installed tutor:
 
 ```powershell
-python C:\atlas-onboarding\scripts\install.py update --atlas C:\atlas_v2.0
-python C:\atlas-onboarding\scripts\install.py remove --atlas C:\atlas_v2.0
+python .\scripts\install.py remove --atlas '<ATLAS_CHECKOUT_PATH>'
 ```
 
-Updates verify ownership hashes before replacing managed files. They also
-support installations made before the quiz skill was added.
-The new skill is installed only if its path is untracked and unused; existing
-unowned skills are never overwritten. Removal handles both installation layouts
-and leaves learner data untouched. Curriculum
-changes invalidate affected completion eligibility without erasing attempts.
-Prerequisite invalidation propagates to dependent lesson eligibility. Product
-source changes still require tutor inspection; curriculum signatures cannot
-prove source freshness or deployed behavior.
+Update and removal verify manifest ownership hashes before changing managed
+files. Edited or missing managed files require explicit reconciliation; there
+is no force-overwrite option. Updates also support installations made before
+the quiz skill was added.
 
-Removal deletes only unchanged, manifest-owned files and the managed Git exclude
-block. Learner data is never read, changed, or deleted by the installer. To keep
-retained learner data private after removal, the installer retains a separate
-local `.onboarding/` exclusion. Empty directories may remain.
+Removal deletes unchanged managed files and their managed exclude block.
+The installer never reads, changes, or deletes learner data. A separate local
+`.onboarding/` exclusion remains to protect retained progress. Empty directories
+may remain after removal.
 
-If a managed file was edited, update/removal fails before changes. Preserve and
-reconcile that file explicitly; there is no force-overwrite option. Unsupported
-database versions also fail without resetting data.
+## CLI reference
+
+The tutor normally runs the CLI; learners do not need to prepare write payloads.
+For troubleshooting, inspect progress without changing it:
+
+```powershell
+python 'C:\path\to\Atlas\.atlas-onboarding\onboarding.py' --atlas 'C:\path\to\Atlas' get-progress
+python 'C:\path\to\Atlas\.atlas-onboarding\onboarding.py' --atlas 'C:\path\to\Atlas' next-topic
+```
+
+`init` creates storage after the saving notice, only when storage is missing.
+`record-coverage` and `save-session` accept JSON through stdin.
+`record-attempt` remains for historical compatibility, not ordinary teaching or
+the optional quiz. Commands return JSON; errors use stderr and exit code 1.
+See [tutor.md](./tutor.md#cli-use) for exact payloads and safe quoting.
 
 ## Validation
 
+Run the test suite from this repository:
+
 ```powershell
-Set-Location C:\atlas-onboarding
 python -m unittest discover -s tests -v
 ```
 
-Tests use isolated temporary Git repositories and SQLite databases, not actual
-learner data. Before wider rollout, verify live agent discovery, safe CLI
-execution, the saving notice, automatic initialization and checkpoints, denied
-writes and explicit requests not to save, Done/Next
-coverage, returning-learner recaps, and revisiting topics in
-each supported IDE. For `/quiz`, check slash discovery, clickable options,
-five-question scoring, cancellation, no-covered-topic behavior, and refusal
-when the question tool is unavailable. Confirm the progress database is unchanged.
-Static checks do not prove live Copilot behavior.
+Tests use temporary Git repositories and SQLite databases, not learner records.
+Before rollout, verify live VS Code agent and skill discovery, command approvals,
+saving notices, automatic checkpoints, Done/Next coverage, returning-learner
+recaps, read-only revisits, and denied-write behavior. Check quiz buttons,
+scoring, cancellation, and unchanged progress during quizzes.
+Automated tests do not prove live Copilot behavior.
