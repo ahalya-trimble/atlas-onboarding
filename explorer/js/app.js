@@ -12,7 +12,7 @@
   try { S = Object.assign(S, JSON.parse(localStorage.getItem(KEY) || "{}")); } catch (e) {}
   const migrate = () => { const m = D.legacyIds || {}; ["done", "quiz"].forEach(k => { const o = S[k] || {}; Object.keys(m).forEach(old => { if (old in o) { o[m[old]] = o[old]; delete o[old]; } }); }); };
   migrate();
-  const isDone = id => !!S.done[id];
+  
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} pushProgress(); };
 
   /* ---------- personalization ---------- */
@@ -30,13 +30,13 @@
 
   const LEVELS = [["Beginner", 0], ["Associate", 150], ["Practitioner", 400], ["Specialist", 800], ["Expert", 1300]];
   const level = () => { let l = LEVELS[0]; for (const x of LEVELS) if (S.xp >= x[1]) l = x; return l[0]; };
-  const codeUnlocked = () => S.unlock || D.phases.filter(p => !p.code).every(p => lessonsOf(p.id).every(l => isDone(l.id)));
-  const pct = pid => { const ls = lessonsOf(pid); return Math.round(100 * ls.filter(l => isDone(l.id)).length / ls.length); };
-  const nextLesson = () => order().find(l => !isDone(l.id) && (!phaseOf(l.phase).code || codeUnlocked()));
+  const codeUnlocked = () => S.unlock || D.phases.filter(p => !p.code).every(p => lessonsOf(p.id).every(l => S.done[l.id]));
+  const pct = pid => { const ls = lessonsOf(pid); return Math.round(100 * ls.filter(l => S.done[l.id]).length / ls.length); };
+  const nextLesson = () => order().find(l => !S.done[l.id] && (!phaseOf(l.phase).code || codeUnlocked()));
 
   /* ---------- chrome ---------- */
   function renderTop() {
-    const total = D.lessons.length, done = D.lessons.filter(l => isDone(l.id)).length;
+    const total = D.lessons.length, done = D.lessons.filter(l => S.done[l.id]).length;
     $("#xp").innerHTML = `<span class="lvl">${S.profile ? esc(S.profile.name) + " · " : ""}${level()}</span><div class="bar"><i style="width:${Math.round(100 * done / total)}%"></i></div><span class="xpn">${done} of ${total} lessons</span>`;
   }
   function renderSide() {
@@ -45,7 +45,7 @@
       D.phases.map(p => {
         const lock = p.code && !codeUnlocked();
         return `<div class="ph" style="--c:${p.color}"><div class="phh"><b>${p.n}. ${p.name}</b><em>${pct(p.id)}%</em></div>` +
-          lessonsOf(p.id).map(l => `<a class="nav ${cur === l.id ? "on" : ""} ${isRec(l.id) ? "rec" : ""}" href="#/lesson/${l.id}"><span class="dot ${isDone(l.id) ? "ok" : lock ? "lk" : ""}"></span>${esc(l.title)}</a>`).join("") + `</div>`;
+          lessonsOf(p.id).map(l => `<a class="nav ${cur === l.id ? "on" : ""} ${isRec(l.id) ? "rec" : ""}" href="#/lesson/${l.id}"><span class="dot ${S.done[l.id] ? "ok" : lock ? "lk" : ""}"></span>${esc(l.title)}</a>`).join("") + `</div>`;
       }).join("") +
       `<div class="ph"><a class="nav ${h === "glossary" ? "on" : ""}" href="#/glossary">Glossary</a><a class="nav ${h === "summary" ? "on" : ""}" href="#/summary">Save-state summary</a><a class="nav" href="#" data-profile>Edit my profile</a></div>`;
     $("#side [data-profile]").onclick = e => { e.preventDefault(); profileModal(); };
@@ -174,7 +174,7 @@
 
   /* ---------- views ---------- */
   function home() {
-    const nx = nextLesson(), r = role(), done = D.lessons.filter(l => isDone(l.id)).length;
+    const nx = nextLesson(), r = role(), done = D.lessons.filter(l => S.done[l.id]).length;
     return `<section class="hero"><div class="eyebrow">${S.profile ? "Welcome, " + esc(S.profile.name) : "Onboarding guide"}</div><h1>Atlas Explorer</h1>
       <p>A visual guide to the <b>ATLAS desktop</b> and <b>eATLAS web</b> applications. We start with the concepts, then move into the source code.${r ? ` <b>Your path:</b> ${esc(r.label)}. ${esc(r.blurb)}` : ""}</p>
       <div class="row">${nx ? `<a class="btn big" href="#/lesson/${nx.id}">${done ? "Continue" : "Start"}: ${esc(nx.title)}</a>` : `<span class="btn big">All lessons complete</span>`}<a class="btn ghost" href="#/setup">Setup guide</a><a class="btn ghost" href="#" data-ask-open>Ask the tutor</a></div>${heroSvg()}</section>
@@ -182,8 +182,8 @@
       D.phases.map(p => {
         const lock = p.code && !codeUnlocked(), ls = lessonsOf(p.id);
         return `<article class="isle" style="--c:${p.color}"><div class="ring" style="--p:${pct(p.id)}"><span>${p.n}</span></div>
-        <h3>${p.name}</h3><p>${p.sub}</p><small>${ls.filter(l => isDone(l.id)).length} of ${ls.length} lessons complete</small>
-        <div class="chips">${ls.map(l => `<a class="chip ${isDone(l.id) ? "ok" : ""} ${isRec(l.id) ? "rec" : ""}" href="#/lesson/${l.id}" title="${esc(l.tag)}">${esc(l.title)}</a>`).join("")}</div>
+        <h3>${p.name}</h3><p>${p.sub}</p><small>${ls.filter(l => S.done[l.id]).length} of ${ls.length} lessons complete</small>
+        <div class="chips">${ls.map(l => `<a class="chip ${S.done[l.id] ? "ok" : ""} ${isRec(l.id) ? "rec" : ""}" href="#/lesson/${l.id}" title="${esc(l.tag)}">${esc(l.title)}</a>`).join("")}</div>
         ${lock ? `<div class="lock">Locked until islands 1 to 4 are done. <a href="#" data-unlock>Skip ahead</a></div>` : ""}</article>`;
       }).join("") + `</div>
       <h2 class="sec">How this works</h2><div class="cards3">
@@ -237,7 +237,7 @@
       <div class="terms big" data-gl>${Object.entries(D.glossary).map(([k, v]) => `<div class="term"><b>${esc(k)}</b><span>${md(v)}</span></div>`).join("")}</div>`;
   }
   function summaryText() {
-    const done = D.lessons.filter(l => isDone(l.id)), left = D.lessons.filter(l => !isDone(l.id)), nx = nextLesson();
+    const done = D.lessons.filter(l => S.done[l.id]), left = D.lessons.filter(l => !S.done[l.id]), nx = nextLesson();
     const terms = [...new Set(done.flatMap(l => l.terms))];
     return ["# Atlas Save State Summary", `_${new Date().toLocaleString()}_  |  Level: ${level()}`, profileLine(), "",
       "## What I learned", ...(done.length ? done.map(l => `- **${l.title}** - ${l.tag}`) : ["- (nothing yet)"]), "",
