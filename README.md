@@ -1,26 +1,43 @@
 # Atlas Onboarding
 
+## 🧭 Atlas Explorer (visual onboarding app)
+
+A visual, personalized study app for new teammates. **One-step install:** double-click `setup.bat`
+(see [GETTING-STARTED.md](./GETTING-STARTED.md)). It installs the ATLAS Tutor agent and the guide into your
+Atlas checkout. You can also open [explorer/index.html](./explorer/index.html) directly.
+
+- 5 "islands": Atlas desktop -> eAtlas -> how they connect -> supporting services -> **source code** (unlocks last).
+- Animated diagrams, clickable architecture map, mock Atlas window, cache-vs-server simulator.
+- Mini-quizzes, XP/levels, glossary, copy-paste starter prompts for the Copilot tutor, and a **Save-state summary** export.
+- Content is drawn from the Atlas repo docs; each lesson lists its source doc.
+- Drop real screenshots into `explorer/assets/screens/` (names in that folder's README) and they appear in the lessons.
+
+Lesson text lives in [explorer/js/data.js](./explorer/js/data.js); edit it to refine content.
+
 **ATLAS Tutor** is a VS Code GitHub Copilot agent for learning Atlas and eAtlas.
 It guides learners through repository-based explanations, suggests follow-up
 questions, and saves learning progress so they can continue in a later chat.
 
-This repository contains the tutor agent, a 25-topic curriculum across nine
-modules, an optional quiz skill, and Python scripts for installation and SQLite
-progress tracking.
+This repository contains the tutor agent, a 30-topic curriculum (the topic list that
+the agent and the visual guide share), an optional recall-quiz skill, the Atlas Explorer
+visual guide, and Python scripts for installation and SQLite storage of saved summaries.
 
 ## What the tutor provides
 
-- A syllabus covering Atlas desktop, eAtlas, connected products, and supporting services.
-- Starter questions and explanations grounded in the Atlas checkout's documentation and source code.
-- Follow-up questions for exploring each topic in more detail.
-- Topic coverage recorded only after the learner says `Done` or `Next`.
-- Saved learning summaries, unfinished topics, next steps, and open questions.
-- Read-only revisits of previously covered material.
-- An optional five-question `/quiz` warm-up using clickable answers.
+The visual guide (Atlas Explorer) teaches the lessons and runs a quiz for each one. The
+tutor does the live part: it answers questions from the current Atlas documents and
+read-only source code.
+
+- Source-grounded answers that cite document sections and code symbols, and mark assumptions.
+- Follow-up questions (Q1-Q3) after each answer.
+- Short saved summaries of what you asked, kept on your computer.
+- **Revisit my learnings**: a read-only recap of your saved summaries, grouped by topic.
+- An optional five-question `/quiz` that only asks about topics you discussed, using clickable answers.
+- It can read your role and completed lessons from the visual guide's progress file, to skip basics.
 
 The tutor reads product sources but does not modify or run product code.
-Lessons are drafts requiring project-expert review; coverage records learning
-activity, not certification or proof of mastery.
+Lessons are drafts requiring project-expert review; saved summaries record what was
+discussed, not certification or proof of mastery.
 
 ## Curriculum
 
@@ -107,47 +124,36 @@ onboarding writes, a maintainer must permit the workflow before installation.
 
 1. Open the Atlas checkout in VS Code and reload the window if needed.
 2. Select **ATLAS Tutor** in Copilot Chat.
-3. Send `Hi` or `Start ATLAS onboarding`.
-4. Review the syllabus and choose a starter question.
+3. Send `Hi` or ask a question.
 
-The first response introduces the syllabus, explains saving, and offers three
-starter questions labelled S1-S3. Choose a label or ask your own question; the
-tutor explains the answer rather than asking you to answer it.
-
-After an explanation, suggested follow-up questions appear as Q1-Q3. These
-labels are chat suggestions, not quiz buttons, and do not mark a topic covered.
+The first response is a one-line welcome, the saving notice, and three sample questions.
+Ask anything about Atlas or eAtlas. After each answer, suggested follow-ups appear as
+Q1-Q3; they are chat suggestions, not quiz buttons.
 
 | Message | Behavior |
 |---|---|
-| `S1`, `Q1`, or your own question | Explain the selected topic or follow-up |
-| `Done` | Mark the explained topic covered and offer the next starter |
-| `Next` | Mark the explained topic covered and continue to the next explanation |
-| `Continue` | Resume saved unfinished learning |
-| `Show progress` | Show covered topics, unfinished learning, and the next eligible topic |
-| `Revisit` or `Revisit <topic>` | Explain previously covered material without changing the continuation point |
-| `Show syllabus` or `Help` | Show the learning outline or usage guide without advancing progress |
-| `Stop onboarding` | Stop tutoring without inventing completion or silently saving |
+| Your own question, or `Q1`-`Q3` | Answer from the current documents and code, then suggest follow-ups |
+| `Revisit my learnings` | Recap the saved summaries by topic (read-only), then continue with Q&A |
+| `Revisit <topic>` | Re-explain one earlier topic from the current sources (read-only) |
+| `/quiz` | Five clickable questions about topics you discussed (not saved) |
+| `Stop` | Stop tutoring without silently saving |
 
-Select ATLAS Tutor before returning with `Hi` or `Continue` in a new chat.
-Selecting the agent alone does not start learning. Switching to another agent
-ends the tutor workflow; ordinary greetings under the default Agent must not
-activate onboarding.
+Select ATLAS Tutor before returning with `Hi` in a new chat. Selecting the agent alone does
+not start a session. Switching to another agent ends the tutor workflow; ordinary
+greetings under the default Agent must not activate it.
 
 ## Optional quiz
 
-While ATLAS Tutor is selected, enter `/quiz` after covering a topic.
-The warm-up asks five questions from verified previously covered material,
-using clickable multiple-choice answers. Each correct answer earns one mark,
-with a final score of `X/5` and short explanations.
+While ATLAS Tutor is selected, enter `/quiz`. It asks five clickable multiple-choice
+questions about topics you previously discussed with the tutor (from the saved summaries).
+Each correct answer earns one mark, with a final score of `X/5` and short explanations.
+The Atlas Explorer already has a quiz for every lesson; this one only helps you remember
+what you asked.
 
-Quiz questions, answers, scores, and explanations stay in chat. They do not
-change coverage, saved notes, or the original continuation point. Quizzes are
-optional and never block learning.
-
-The quiz requires a supported structured question tool exposed by the host
-(`ask_user` or `vscode/askQuestions`, including its runtime alias).
-If no supported tool or sufficient covered material is available, it does not
-start. It never substitutes typed A/B/C/D answers for clickable questions.
+Quiz questions, answers and scores stay in chat and are never saved. The quiz requires a
+supported structured question tool exposed by the host (`ask_user` or `vscode/askQuestions`,
+including its runtime alias). If no supported tool or no discussed topic is available, it does
+not start. It never substitutes typed A/B/C/D answers for clickable questions.
 
 ## Progress tracking
 
@@ -161,16 +167,15 @@ first learner-data write in a conversation:
 Progress is stored at `.onboarding/onboarding.db` inside the Atlas checkout.
 Reading progress alone does not create a database.
 
-Meaningful explanations and follow-ups save session summaries automatically.
-A welcome or starter menu alone does not create a session checkpoint.
-Coverage is recorded only after `Done` or `Next`. Revisits remain read-only
-unless the learner explicitly asks to save notes; quizzes never write progress.
+Each substantive answer saves a short session summary automatically. A welcome or sample
+questions alone does not create one. Revisits remain read-only unless the learner
+explicitly asks to save notes; quizzes never write progress.
 
 | Table | Stored information |
 |---|---|
 | `learner` | Single-learner initialization, creation time, and write revision |
 | `topics` | Current topic status, latest event, and curriculum evidence signature |
-| `attempts` | Coverage events and retained historical assessment records |
+| `attempts` | Historical coverage and assessment records (no longer written by the tutor) |
 | `sessions` | Append-only summaries, current topic, next step, and open questions |
 | `reviews` | Historical review schedules retained for compatibility |
 
@@ -240,7 +245,7 @@ python -m unittest discover -s tests -v
 
 Tests use temporary Git repositories and SQLite databases, not learner records.
 Before rollout, verify live VS Code agent and skill discovery, command approvals,
-saving notices, automatic checkpoints, Done/Next coverage, returning-learner
-recaps, read-only revisits, and denied-write behavior. Check quiz buttons,
-scoring, cancellation, and unchanged progress during quizzes.
+saving notices, automatic summaries, returning-learner welcome, Revisit my learnings,
+and denied-write behavior. Check quiz buttons, scoring, cancellation, and that nothing
+is saved during quizzes.
 Automated tests do not prove live Copilot behavior.
