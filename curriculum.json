@@ -57,6 +57,10 @@
     {
       "id": "capstone",
       "title": "End-to-end evidence-based investigation"
+    },
+    {
+      "id": "source-code",
+      "title": "Source code tour (read-only)"
     }
   ],
   "lessons": [
@@ -791,6 +795,182 @@
           "The trace distinguishes local MongoDB, primary OData, eAtlas/shared SQL, and direct MTP DWCR submission",
           "A network-loss or BCS Level 3 example explains the applicable documented restriction without claiming a proven runtime diagnosis",
           "The explanation cites document sections and any inspected code paths or symbols, labels hypotheses, identifies missing evidence, and does not modify or execute product code or access external systems"
+        ]
+      }
+    },
+    {
+      "id": "code-map",
+      "moduleId": "source-code",
+      "title": "Repository map: solutions, current trees, and legacy folders",
+      "prerequisites": [],
+      "objectives": [
+        "Choose the correct solution file and the current project folders",
+        "Avoid legacy folders and find each project's documentation"
+      ],
+      "sources": [
+        {
+          "path": "docs/projects/01-atlas-application.md",
+          "sections": [
+            "Place in the repository",
+            "Source map for later docs"
+          ]
+        }
+      ],
+      "starterQuestion": "Which solution do I open, which folders are current, and which should I avoid?",
+      "assessment": {
+        "id": "code-map-check",
+        "question": "Explain which solution to open, which folders hold the current desktop, OData and eAtlas code, and which folders to avoid.",
+        "requiredConcepts": [
+          "The root Atlas.sln is the product solution and nested solution files are not",
+          "Current code lives in trees such as AlmanacApp/Almanac and AtlasWeb/eAtlas",
+          "AlmanacShell, AlmanacShell-PreV5 and Services-PreV5 are legacy and are avoided unless the task is legacy",
+          "AlmanacProductDetails is the current service-case UI"
+        ]
+      }
+    },
+    {
+      "id": "code-desktop",
+      "moduleId": "source-code",
+      "title": "Desktop code: startup, shell, and Product Details",
+      "prerequisites": [
+        "code-map"
+      ],
+      "objectives": [
+        "Trace how the desktop shell starts and builds its main views",
+        "Locate the Product Details code used for service cases and DWCR"
+      ],
+      "sources": [
+        {
+          "path": "docs/projects/01-atlas-application.md",
+          "sections": [
+            "Application structure",
+            "Shell view-model initialization",
+            "Runtime and integrations"
+          ]
+        }
+      ],
+      "starterQuestion": "How does the Atlas desktop shell start and where do service cases and DWCR live in the code?",
+      "assessment": {
+        "id": "code-desktop-check",
+        "question": "Describe how the desktop application starts, which views it creates, and where you would look for the Submit DWCR UI.",
+        "requiredConcepts": [
+          "Atlas.exe is built from the AlmanacApp/Almanac project",
+          "Startup checks cover single instance, license and the local MongoDB",
+          "The shell creates the main views such as Dashboard, Product, My Cases, Help, About and Settings",
+          "The Submit DWCR UI is in the Product Details module"
+        ]
+      }
+    },
+    {
+      "id": "code-messages",
+      "moduleId": "source-code",
+      "title": "The Messages layer: cache or server",
+      "prerequisites": [
+        "code-desktop"
+      ],
+      "objectives": [
+        "Explain what a message class is and how it chooses between cache and server",
+        "Tell Messages apart from overlay dialogs and sync workers"
+      ],
+      "sources": [
+        {
+          "path": "docs/projects/01-atlas-application.md",
+          "sections": [
+            "Messages project (not UI toasts)",
+            "Local MongoDB and Force Sync"
+          ]
+        }
+      ],
+      "starterQuestion": "What is the Messages layer and how does it decide between the local cache and the server?",
+      "assessment": {
+        "id": "code-messages-check",
+        "question": "Explain how a desktop message decides between local data and the server, and how Messages differ from MessageOverlay and SyncMessages.",
+        "requiredConcepts": [
+          "Message classes inherit BaseMessage and MessageTransactions is the facade that Product Details calls",
+          "DataSource modes Cache, Server, CacheOrServer and ServerOrCache choose where data comes from",
+          "Messages are different from MessageOverlay UI dialogs and SyncMessages Force Sync workers"
+        ]
+      }
+    },
+    {
+      "id": "code-backends",
+      "moduleId": "source-code",
+      "title": "Backend code: OData and eAtlas stacks",
+      "prerequisites": [
+        "code-desktop"
+      ],
+      "objectives": [
+        "Compare the OData and eAtlas technology stacks",
+        "Explain why both use the same shared SQL database"
+      ],
+      "sources": [
+        {
+          "path": "docs/projects/02-odata-service.md",
+          "sections": [
+            "Project structure",
+            "Relation to Atlas and eAtlas"
+          ]
+        },
+        {
+          "path": "docs/projects/03-eatlas.md",
+          "sections": [
+            "Project structure",
+            "Relation to Atlas and OData"
+          ]
+        }
+      ],
+      "starterQuestion": "How do the OData service and eAtlas differ in code, and what do they share?",
+      "assessment": {
+        "id": "code-backends-check",
+        "question": "Compare the OData service and eAtlas code and explain what they share.",
+        "requiredConcepts": [
+          "OData is an ASP.NET Web API service on .NET Framework with Entity Framework 6 contexts",
+          "eAtlas is an ASP.NET Core application with EF Core, controllers, SignalR hubs and a React client",
+          "Both work against the same shared SQL database"
+        ]
+      }
+    },
+    {
+      "id": "code-capstone",
+      "moduleId": "source-code",
+      "title": "Capstone: trace a repair through documents and code",
+      "prerequisites": [
+        "code-messages",
+        "code-backends"
+      ],
+      "objectives": [
+        "Locate the code that implements a documented behaviour",
+        "Report supported facts, hypotheses and missing evidence separately"
+      ],
+      "sources": [
+        {
+          "path": "docs/projects/01-atlas-application.md",
+          "sections": [
+            "Product Details and the service case page",
+            "Submit DWCR (warranty claim)"
+          ]
+        },
+        {
+          "path": "docs/projects/03-eatlas.md",
+          "sections": [
+            "How it connects to Atlas"
+          ]
+        },
+        {
+          "path": "docs/Functionality/bcs-notifications.md",
+          "sections": [
+            "Atlas desktop behaviour"
+          ]
+        }
+      ],
+      "starterQuestion": "Trace one documented behaviour from the document to the code that implements it.",
+      "assessment": {
+        "id": "code-capstone-check",
+        "question": "Pick one documented behaviour and show the document section, the inspected code symbol, and one evidence gap.",
+        "requiredConcepts": [
+          "The trace starts from a documented behaviour and then locates the inspected code path or symbol",
+          "Supported explanation, hypothesis and missing evidence are labelled separately",
+          "Product code is read only and is never modified or executed during learning"
         ]
       }
     }

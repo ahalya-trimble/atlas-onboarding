@@ -253,7 +253,7 @@ class InstallerTests(Fixture):
         header = agent.split("---", 2)[1]
         self.assertIn("user-invocable: true", header)
         self.assertIn("disable-model-invocation: true", header)
-        self.assertLess(agent.index("## Activation boundary"), agent.index("Before teaching"))
+        self.assertLess(agent.index("## Activation boundary"), agent.index("Before answering"))
         self.assertIn("previous tutor messages are history, not active rules", agent)
         self.assertIn("Active agent instructions are sufficient evidence", agent)
         self.assertIn("not when it is merely read as a file", agent)
@@ -272,210 +272,100 @@ class InstallerTests(Fixture):
         self.assertIn("Use English only in every learner-facing response", agent)
         self.assertIn("Use English only in every learner-facing response", workflow)
 
-    def test_installed_tutor_uses_starters_and_automatic_checkpoints(self):
+    def texts(self):
         self.install()
         agent = (self.atlas / ".github" / "agents" /
                  "atlas-onboarding-local.agent.md").read_text()
         workflow = (self.atlas / ".atlas-onboarding" / "tutor.md").read_text()
-        self.assertIn("not quizzes", agent)
-        self.assertIn("Do not give quizzes, assessment questions", workflow)
-        self.assertIn("automatically", workflow)
-        self.assertIn("after each substantive explanation or follow-up", workflow)
-        self.assertIn("For a returning learner", workflow)
-        self.assertIn("record-coverage", workflow)
-        self.assertNotIn("Use the exact lesson assessment question", workflow)
+        quiz = (self.atlas / ".github" / "skills" / "quiz" / "SKILL.md").read_text()
+        return agent, workflow, quiz
 
-    def test_installed_tutor_notifies_and_saves_automatically(self):
-        self.install()
-        agent = (self.atlas / ".github" / "agents" /
-                 "atlas-onboarding-local.agent.md").read_text()
-        workflow = (self.atlas / ".atlas-onboarding" / "tutor.md").read_text()
+    def test_tutor_is_question_and_answer_not_a_second_course(self):
+        agent, workflow, _ = self.texts()
         for content in (agent, workflow):
-            self.assertIn("saved automatically on this computer", content)
-            self.assertIn("No name or email is required", content)
-            self.assertNotIn("Would you like me to track your progress", content)
+            self.assertIn("Ask me anything about Atlas or eAtlas", content)
+            self.assertNotIn("Let's explore Atlas step by step", content)
+            self.assertNotIn("What you will learn", content)
+            self.assertNotIn("Start here", content.replace('no "Start here" list', ""))
+        self.assertIn("no syllabus diagram", workflow)
+        self.assertIn("no Done/Next coverage", workflow)
+        self.assertIn("**You can ask next**", workflow)
+        self.assertIn("Q1-Q3", agent)
+        self.assertIn("mark assumptions", agent)
+        self.assertIn("visual guide", agent)
+        self.assertNotIn("S1", workflow)
+
+    def test_tutor_saves_summaries_only_and_never_coverage_or_assessments(self):
+        agent, workflow, _ = self.texts()
+        self.assertIn("Do not call `record-coverage` or `record-attempt`", workflow)
+        self.assertIn("call `save-session` once", workflow)
+        self.assertIn("Never save a transcript, names", workflow)
         self.assertIn("Do not ask a tracking question", workflow)
-        self.assertIn("Keep detailed learning summaries", workflow)
-        self.assertIn("Do not save an entire chat transcript", workflow)
-        self.assertIn("learner explicitly asks not to save", workflow)
-        self.assertIn("denied, saving fails", workflow)
-        self.assertIn("then the first-use saving notice below, then run `init`", workflow)
+        self.assertIn("UNSAVED", workflow)
+        self.assertIn("Never delete or reset existing records", workflow)
+        self.assertIn("Do not save a greeting, a menu, a Revisit, or a quiz", workflow)
+        self.assertIn("saved automatically on this computer", workflow)
+        self.assertIn("not encrypted", workflow)
+        self.assertIn("Do not teach the curriculum in order", agent)
+        self.assertIn("Put the complete learner-facing answer in the final response", agent)
+        self.assertIn("Put the complete answer in the final response", workflow)
 
-    def test_installed_tutor_guides_beginner_and_follow_up_questions(self):
-        self.install()
-        agent = (self.atlas / ".github" / "agents" /
-                 "atlas-onboarding-local.agent.md").read_text()
-        workflow = (self.atlas / ".atlas-onboarding" / "tutor.md").read_text()
-        for content in (agent, workflow):
-            self.assertIn("Start here", content)
-            self.assertIn("You can ask next", content)
-            self.assertIn("S1", content)
-            self.assertIn("Q1", content)
-        self.assertIn("first three topics' exact `starterQuestion` values", workflow)
-        self.assertIn("After every explanation or substantive follow-up", workflow)
-        self.assertIn("two or three short, specific questions", workflow)
-        self.assertIn("never topic coverage", workflow)
-        self.assertIn("keeps the current topic unfinished until Done or Next", workflow)
-        self.assertIn("If the selection is ambiguous or its list is unavailable", workflow)
-
-    def test_installed_tutor_hides_legacy_review_schedules(self):
-        self.install()
-        agent = (self.atlas / ".github" / "agents" /
-                 "atlas-onboarding-local.agent.md").read_text()
-        workflow = (self.atlas / ".atlas-onboarding" / "tutor.md").read_text()
-        self.assertIn('Do not show legacy review schedules, due dates, or "No reviews due"', agent)
-        self.assertIn("Do not display review schedules, due dates, review counts", workflow)
-        self.assertIn("whether this list is empty or populated", workflow)
-        self.assertIn("read progress without writing a checkpoint", workflow)
-        self.assertIn("If all topics are covered, say so", workflow)
-        self.assertIn("Preserve historical review data unchanged", workflow)
-
-    def test_installed_tutor_explains_syllabus_and_usage_on_first_visit(self):
-        self.install()
-        agent = (self.atlas / ".github" / "agents" /
-                 "atlas-onboarding-local.agent.md").read_text()
-        workflow = (self.atlas / ".atlas-onboarding" / "tutor.md").read_text()
-        for content in (agent, workflow):
-            self.assertIn("What you will learn", content)
-            self.assertIn("How to use this tutor", content)
-            self.assertIn("installed curriculum", content)
-        self.assertIn("including an initialized but unused database", workflow)
-        self.assertIn("only once in the current conversation", workflow)
-        self.assertIn("under 200 words", workflow)
-        self.assertIn("Show all curriculum modules in order", workflow)
-        self.assertIn("Show syllabus", workflow)
-        self.assertIn("navigation requests, not topic coverage", workflow)
-        self.assertIn("Returning learners get their saved recap instead", workflow)
-
-    def test_installed_tutor_starts_with_complete_plain_text_syllabus_diagram(self):
-        self.install()
-        agent = (self.atlas / ".github" / "agents" /
-                 "atlas-onboarding-local.agent.md").read_text()
-        workflow = (self.atlas / ".atlas-onboarding" / "tutor.md").read_text()
-        for content in (agent, workflow):
-            self.assertIn("Welcome to ATLAS Tutor! Let's explore Atlas step by step.", content)
-            self.assertIn("exactly one short welcome line", content)
-            self.assertIn("Immediately follow it", content)
-        self.assertIn("Do not repeat this first-time greeting on every turn", workflow)
-        self.assertIn("before the saving notice, product introduction, usage guide", workflow)
-        diagram = workflow.split("```text\n", 1)[1].split("```", 1)[0]
-        curriculum = self.store().curriculum
-        self.assertIn(
-            f"({len(curriculum['lessons'])} topics, {len(curriculum['modules'])} modules)",
-            diagram)
-        branches = [line for line in diagram.splitlines()
-                    if line.startswith(("+-- ", "`-- "))]
-        self.assertEqual(len(curriculum["modules"]), len(branches))
-        for index, branch in enumerate(branches, 1):
-            self.assertTrue(branch[4:].startswith(f"{index}. "))
-        self.assertTrue(all(len(line) <= 72 for line in diagram.splitlines()))
-        self.assertIn("Mermaid-only output", workflow)
-        self.assertIn("show the syllabus diagram again", workflow)
-
-    def test_installed_tutor_explains_revisits_without_duplicate_saves(self):
-        self.install()
-        agent = (self.atlas / ".github" / "agents" /
-                 "atlas-onboarding-local.agent.md").read_text()
-        workflow = (self.atlas / ".atlas-onboarding" / "tutor.md").read_text()
-        self.assertIn('On "revisit", explain what was previously covered', agent)
+    def test_revisit_my_learnings_recaps_saved_summaries_read_only(self):
+        agent, workflow, _ = self.texts()
+        self.assertIn("Revisit my learnings", agent)
+        self.assertIn("Revisit my learnings", workflow)
+        self.assertIn("`sessions` list", workflow)
+        self.assertIn("This is read-only. Do not call `init` or `save-session`", workflow)
+        self.assertIn("Never invent history", workflow)
         self.assertIn("Revisit is read-only", agent)
-        self.assertIn("recap all previously covered topics in curriculum order", workflow)
-        self.assertIn("three to five key takeaways and one short practical example", workflow)
-        self.assertIn("A storage-status message is not a learning recap", workflow)
-        self.assertIn("This exception overrides normal automatic checkpoint saving", workflow)
-        self.assertIn("Only an explicit request to save revisit notes", workflow)
-        self.assertIn("returns to the original eligible unfinished topic", workflow)
-        self.assertIn("If neither source exists", workflow)
 
-    def test_installed_tutor_keeps_learning_in_final_visible_response(self):
-        self.install()
-        agent = (self.atlas / ".github" / "agents" /
-                 "atlas-onboarding-local.agent.md").read_text()
-        workflow = (self.atlas / ".atlas-onboarding" / "tutor.md").read_text()
+    def test_quiz_is_limited_to_discussed_topics_clickable_and_unsaved(self):
+        agent, workflow, quiz = self.texts()
+        self.assertIn("/quiz", agent)
+        self.assertIn("only about topics the learner previously discussed", agent)
+        self.assertIn("Use only the `sessions` list", quiz)
+        self.assertIn("Do not ask about topics the learner has not discussed", quiz)
+        self.assertIn("Never call `init` or `save-session` for a quiz", quiz)
+        self.assertIn("never call `record-coverage` or `record-attempt`", quiz.replace(
+            "and never call", "and never call"))
+        self.assertIn("scores stay in this chat and are not saved", quiz)
+        self.assertIn("Do not substitute Markdown links, typed A/B/C/D choices", quiz)
+        self.assertIn("allowFreeformInput: false", quiz)
+        self.assertIn("Never set `recommended` on any option", quiz)
+        self.assertIn("exactly five distinct questions", quiz)
+        self.assertIn("use each of the four positions at least once", quiz)
+        self.assertIn("ask_user", quiz)
+        self.assertIn("vscode/askQuestions", quiz)
+        self.assertIn("Do not require visibility of the agent picker", quiz)
+        self.assertNotIn("teach-back", quiz.replace("Do not ask a teach-back question.", ""))
+        self.assertIn("The Atlas Explorer already has a quiz for every lesson", quiz)
+
+    def test_agent_may_read_explorer_progress_file_read_only(self):
+        agent, workflow, _ = self.texts()
         for content in (agent, workflow):
-            self.assertIn("complete learner-facing answer in the final response", content)
-        self.assertIn("repeat the complete welcome in the final response", workflow)
-        self.assertIn("final first-time reply must contain, in order", workflow)
-        self.assertIn("actual S1-S3 starter questions", workflow)
-        self.assertIn("do not call `save-session` merely to checkpoint the welcome", workflow)
-        self.assertIn("Initializing storage does not make the learner a returning learner", workflow)
-        self.assertIn("retain the learning content and explicitly report UNSAVED", workflow)
-        self.assertIn("without internal revision numbers", workflow)
-        self.assertIn("optional quiz still presents its clickable questions", workflow)
+            self.assertIn(".atlas-onboarding/state/explorer-progress.json", content)
+            self.assertIn("read only", content)
+            self.assertIn("Ignore", content)
+        self.assertIn("never as evidence of understanding", " ".join(agent.split()))
+
+    def test_progress_lists_saved_sessions_for_revisit(self):
+        store = self.init_store()
+        self.assertEqual([], store.progress()["sessions"])
+        for index in (1, 2):
+            store.write("save-session", {
+                "id": f"s{index}", "expectedRevision": index - 1,
+                "currentTopicId": next(iter(store.lessons)),
+                "summary": f"Discussed question {index}", "nextStep": "Ask more",
+                "openQuestions": []})
+        sessions = store.progress()["sessions"]
+        self.assertEqual(["s1", "s2"], [item["id"] for item in sessions])
+        self.assertEqual("s2", store.progress()["lastSession"]["id"])
 
     def install_legacy_package(self):
         files = {name: source for name, source in installer.FILES.items()
                  if name in installer.LEGACY_FILES}
-        with patch.object(installer, "FILES", files), \
-                patch.object(installer, "EXCLUDES", installer.LEGACY_EXCLUDES):
+        with patch.object(installer, "FILES", files),                 patch.object(installer, "EXCLUDES", installer.LEGACY_EXCLUDES):
             self.install()
-
-    def test_installed_quiz_is_user_triggered_with_clickable_choices_only(self):
-        self.install()
-        skill_path = self.atlas / ".github" / "skills" / "quiz" / "SKILL.md"
-        skill = skill_path.read_text()
-        agent_path = self.atlas / ".github" / "agents" / "atlas-onboarding-local.agent.md"
-        agent = agent_path.read_text()
-        workflow = (self.atlas / ".atlas-onboarding" / "tutor.md").read_text()
-        self.assertTrue(skill.startswith("---\nname: quiz\n"))
-        self.assertIn("user-invocable: true", skill)
-        self.assertIn("disable-model-invocation: true", skill)
-        self.assertIn("vscode/askQuestions", agent.split("---", 2)[1])
-        self.assertIn("ask_user", agent.split("---", 2)[1])
-        self.assertIn("multiSelect: false", skill)
-        self.assertIn("allowFreeformInput: false", skill)
-        self.assertIn("exactly five distinct questions", skill)
-        self.assertIn("exactly one unambiguous correct answer", skill)
-        self.assertIn("Warm-up score: X/5", skill)
-        self.assertIn("do not start", agent)
-        self.assertIn("Only when the learner invokes `/quiz`", agent)
-        self.assertIn("Ordinary learning stays quiz-free", workflow)
-        self.assertTrue((agent_path.parent / ".." / "skills" / "quiz" / "SKILL.md").is_file())
-        for relative in ("tutor.md", "curriculum.json"):
-            self.assertTrue((skill_path.parent / ".." / ".." / ".." /
-                             ".atlas-onboarding" / relative).is_file())
-
-    def test_quiz_instructions_preserve_progress_and_handle_interruption(self):
-        skill = installer.FILES[".github/skills/quiz/SKILL.md"].read_text()
-        self.assertIn("Read learner progress only", skill)
-        self.assertIn("Never call `init`, `record-coverage`, `record-attempt`, or `save-session`", skill)
-        self.assertIn("Do not save questions, answers, scores", skill)
-        self.assertIn("original continuation topic", skill)
-        self.assertIn("Exclude freshness-uncertain topics", skill)
-        self.assertIn("Do not test future lessons, previews, unfinished topics", skill)
-        self.assertIn("If no covered learning can be verified", skill)
-        self.assertIn("fewer than five distinct, supported questions", skill)
-        self.assertIn("Do not substitute Markdown links, typed A/B/C/D choices", skill)
-        self.assertIn("do not infer an answer", skill.lower())
-        self.assertIn("skips, cancels, asks to stop", skill)
-        self.assertIn("clearly labelled incomplete", skill)
-        self.assertIn("must select ATLAS Tutor first", skill)
-
-    def test_quiz_varies_correct_option_positions_and_preserves_answer_mapping(self):
-        skill = installer.FILES[".github/skills/quiz/SKILL.md"].read_text()
-        self.assertIn("use each of the four positions at least once", skill)
-        self.assertIn("exactly one position used twice and no adjacent repeats", skill)
-        self.assertIn("Vary the order between quizzes", skill)
-        self.assertIn("correct answer keyed to its exact option text", skill)
-        self.assertIn("verify the answer mapping after reordering", skill)
-        self.assertIn("Do not reveal the position plan", skill)
-        self.assertIn("Keep that order and answer fixed once displayed", skill)
-        self.assertIn("do not treat that as a submitted answer", skill)
-
-    def test_quiz_supports_runtime_question_forms_without_picker_visibility(self):
-        skill = installer.FILES[".github/skills/quiz/SKILL.md"].read_text()
-        self.assertIn("Do not require visibility of the agent picker", skill)
-        self.assertIn("using tool discovery first if tools are deferred", skill)
-        self.assertIn("Prefer `ask_user` when actually exposed", skill)
-        self.assertIn("`vscode_askQuestions`", skill)
-        self.assertIn("`requestedSchema.properties.answer`", skill)
-        self.assertIn("four `enum` option labels", skill)
-        self.assertIn("Omit a default", skill)
-        self.assertIn("Do not pass the VS Code `questions` array", skill)
-        self.assertIn("Grade only an exact match", skill)
-        self.assertIn("Handle decline/cancel as interruption", skill)
-        self.assertIn("If no supported tool is exposed", skill)
-        self.assertIn("without restarting the quiz", skill)
 
     def test_legacy_update_adds_quiz_without_changing_learning_data(self):
         self.install_legacy_package()
@@ -626,7 +516,7 @@ class CoverageTests(Fixture):
             store.write("record-coverage", self.coverage(store, topic))
             self.assertEqual(index + 1, store.progress()["revision"])
         progress = store.progress()
-        self.assertEqual(25, len(progress["topics"]))
+        self.assertEqual(len(store.lessons), len(progress["topics"]))
         self.assertTrue(all(topic["understanding"] == "covered" for topic in progress["topics"]))
         self.assertIsNone(progress["nextTopic"])
         self.assertEqual([], progress["dueReviews"])
@@ -768,16 +658,16 @@ class StoreTests(Fixture):
         self.assertEqual([], store.progress()["attempts"])
         self.assertEqual(0, store.progress()["revision"])
 
-    def test_all_25_lessons_complete_in_curriculum_order(self):
+    def test_all_lessons_complete_in_curriculum_order(self):
         store = self.init_store()
-        self.assertEqual(25, len(store.lessons))
+        self.assertEqual(30, len(store.lessons))
         for index, lesson in enumerate(store.lessons.values()):
             progress = store.progress()
             self.assertEqual(lesson["id"], progress["nextTopic"])
             store.write("record-attempt", self.attempt(store, lesson["id"]))
             self.assertEqual(index + 1, store.progress()["revision"])
         self.assertIsNone(store.progress()["nextTopic"])
-        self.assertEqual(25, len(store.progress()["attempts"]))
+        self.assertEqual(len(store.lessons), len(store.progress()["attempts"]))
 
     def test_failed_attempt_does_not_complete_topic(self):
         store = self.init_store()

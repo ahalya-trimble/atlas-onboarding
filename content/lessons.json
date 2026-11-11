@@ -1,0 +1,1829 @@
+{
+ "videos": {
+  "atlas": {
+   "id": "1LYCuUIvet4CP2KqKcTHEpp4qGj5KltOl",
+   "title": "Atlas application overview",
+   "note": "Knowledge-transfer walkthrough of the ATLAS desktop application."
+  },
+  "eatlas": {
+   "id": "1IVR4C0UjNOVcN0zlUvf5MStrfJ2GKc6E",
+   "title": "eAtlas application overview",
+   "note": "Introduction to eAtlas, Service Cases, Documentation and Application Routing Pages, Technical Data and Files, User Management & Access Control, Licenses and Training Data."
+  },
+  "architecture": {
+   "file": "assets/videos/architecting-atlas.mp4",
+   "title": "Architecting Atlas: Connecting Trimble Hardware to the Cloud",
+   "note": ""
+  }
+ },
+ "phases": [
+  {
+   "id": "desktop",
+   "n": 1,
+   "icon": "🖥️",
+   "color": "#3b82f6",
+   "name": "Atlas Desktop Island",
+   "sub": "What technicians use to repair instruments",
+   "code": false
+  },
+  {
+   "id": "eatlas",
+   "n": 2,
+   "icon": "🌐",
+   "color": "#8b5cf6",
+   "name": "eAtlas Web Bay",
+   "sub": "What service managers use in the browser",
+   "code": false
+  },
+  {
+   "id": "connect",
+   "n": 3,
+   "icon": "🔗",
+   "color": "#d4893a",
+   "name": "The Big Picture Bridge",
+   "sub": "How the pieces talk to each other",
+   "code": false
+  },
+  {
+   "id": "services",
+   "n": 4,
+   "icon": "🛰️",
+   "color": "#2a9d8f",
+   "name": "Satellite Services Reef",
+   "sub": "Background jobs that keep data fresh",
+   "code": false
+  },
+  {
+   "id": "code",
+   "n": 5,
+   "icon": "🧬",
+   "color": "#6366a8",
+   "name": "Source Code Caves",
+   "sub": "Now we open the code (concepts first, done!)",
+   "code": true
+  }
+ ],
+ "glossary": {
+  "Atlas": "The product name users see. Windows desktop app (Atlas.exe) for authorized service technicians.",
+  "Almanac": "Old/code name. Folders, DLLs and classes still say Almanac. Atlas = Almanac.",
+  "eAtlas": "Atlas Web. Browser app for service managers + the Dashboard embedded inside desktop Atlas.",
+  "Service case": "The record of one repair visit for one instrument. Everything the tech does is saved against it.",
+  "MTP": "External system Atlas calls to get sales + warranty info for a serial number.",
+  "TWoD": "Trimble's Salesforce org. Master source of products, companies, users, bulletins, authorizations.",
+  "DWCR": "Warranty claim sent to MTP by EXTERNAL technicians. Completes the case on success.",
+  "Service-Support": "A Salesforce Case that INTERNAL technicians raise to ask for repair help.",
+  "OData Service": "Primary backend of the desktop app (ASP.NET Web API on IIS, route /odata).",
+  "MongoDB (local)": "Windows service installed with Atlas. Local copy of server data so work is fast and possible offline.",
+  "Force Sync": "Copies server data into local MongoDB (and pushes local changes up) in a fixed order.",
+  "EMS": "Entitlement system for Atlas APPLICATION seats (not instrument licenses).",
+  "OKWS": "Instrument license server asked for temporary instrument service keys.",
+  "BCS": "Baseline Calibration Software – calibrates X/SX instruments; launched from Atlas Settings.",
+  "Detector": "Plugin that auto-detects a connected instrument.",
+  "Service operation": "Plugin (DLL/EXE) that does a repair/calibration step on the device and reports pass/fail.",
+  "Almanac API": "The contract that detector/operation plugins implement (Trimble.Almanac.API).",
+  "Task list": "Right-hand list in a service case: operations, parts, bulletins the tech will perform.",
+  "Collimator license": "Restricted external license: baseline/collimator work, cannot create service cases or DWCR.",
+  "Environment Switch": "INTERNAL tool to point a local install at prod/stage/dev. Never for field techs.",
+  "Reset Almanac Offline": "Companion app that wipes local MongoDB so the next login rebuilds it.",
+  "Agentic AI": "Trimble's AI chat used as the Repair Assistant; knowledge comes from manuals + bulletins.",
+  "Global Service": "Thin HTTP API for OTHER Trimble teams (calibration PDF, recent closed cases...)."
+ },
+ "phaseOfModule": {
+  "orientation": "desktop",
+  "desktop-essentials": "desktop",
+  "desktop-repair": "desktop",
+  "desktop-capabilities": "desktop",
+  "eatlas-essentials": "eatlas",
+  "eatlas-capabilities": "eatlas",
+  "connected-products": "connect",
+  "supporting-services": "services",
+  "capstone": "services",
+  "source-code": "code"
+ },
+ "legacyIds": {
+  "startup-navigation": "atlas-startup-navigation",
+  "access-licensing": "atlas-access-and-licensing",
+  "service-case": "service-case-details",
+  "warranty-support": "warranty-and-support",
+  "bcs": "baseline-calibration",
+  "ai-assistant": "desktop-ai-assistant",
+  "offline-sync": "offline-and-sync",
+  "recovery": "installation-and-recovery",
+  "eatlas-manage": "eatlas-management",
+  "architecture": "atlas-eatlas-architecture",
+  "daily-jobs": "master-data-sync",
+  "licensing-services": "ems-licensing",
+  "constants-pipeline": "instrument-constants-pipeline",
+  "global-service": "global-service-boundaries"
+ },
+ "lessons": [
+  {
+   "id": "atlas-overview",
+   "video": {
+    "key": "atlas",
+    "embed": true,
+    "chapters": [
+     "Atlas overview: purpose, users and the technician workflow"
+    ]
+   },
+   "icon": "🧭",
+   "title": "What is ATLAS?",
+   "tag": "The 60-second story",
+   "shot": "atlas-overview",
+   "hook": "Imagine a pit-crew toolbox for surveying instruments. Atlas tells a technician what to fix, runs the tests, records the work and files the warranty claim.",
+   "points": [
+    "**Atlas** is an online **Service Repair Workflow** for **Authorized Service Technicians** of Trimble products.",
+    "One-stop shop: repair guidance, service software (detectors/operations), warranty claims, **service cases**, service history.",
+    "**Windows only** – it loads instrument plugins as DLLs/EXEs. That is why it is not a web app.",
+    "**Almanac** is the old name. Users see Atlas, the code still says Almanac (`AlmanacApp/Almanac`, `Trimble.Almanac.API`)."
+   ],
+   "viz": {
+    "type": "cards",
+    "items": [
+     {
+      "i": "🧑‍🔧",
+      "t": "Who",
+      "d": "Authorized service technicians at Trimble service centers and partners."
+     },
+     {
+      "i": "🎯",
+      "t": "What",
+      "d": "Guided repair: identify unit → open case → run operations → report/claim."
+     },
+     {
+      "i": "🪟",
+      "t": "Where",
+      "d": "Windows desktop app: Atlas.exe (WPF, .NET Framework 4.8.1)."
+     },
+     {
+      "i": "🏷️",
+      "t": "Name trick",
+      "d": "Atlas = Almanac. Search the code for 'Almanac'!"
+     }
+    ]
+   },
+   "terms": [
+    "Atlas",
+    "Almanac",
+    "Service case"
+   ],
+   "quiz": {
+    "q": "A teammate says 'the Almanac project'. What are they talking about?",
+    "o": [
+     "A different product",
+     "Atlas – Almanac is the code/old name",
+     "eAtlas only",
+     "The OData database"
+    ],
+    "a": 1,
+    "why": "Source, assemblies and install paths still say Almanac; the shipped product is Atlas."
+   },
+   "prompts": [
+    "Explain Atlas to me like I'm new, using an analogy",
+    "Why does the code say Almanac instead of Atlas?",
+    "Who are the users of Atlas and what do they need?"
+   ]
+  },
+  {
+   "id": "atlas-startup-navigation",
+   "icon": "🚀",
+   "title": "Install, startup & navigation",
+   "tag": "What must exist before Atlas opens",
+   "shot": "startup-navigation",
+   "hook": "Atlas is picky: no license, no MongoDB, or a second copy running → it will not start.",
+   "points": [
+    "The installer puts **3 programs + 1 database** on the PC.",
+    "Startup checks: **single instance**, **valid license + authorizations**, **MongoDB service running**.",
+    "Main menu: **Product Details**, **My Service Cases**, **Dashboard**, **Settings / Help / About**.",
+    "Click the mock window below to explore each area."
+   ],
+   "viz": [
+    {
+     "type": "mock"
+    },
+    {
+     "type": "flowchart",
+     "title": "What happens when you launch Atlas.exe (docs: App.xaml.cs startup rules)",
+     "items": [
+      {
+       "k": "s",
+       "t": "Launch Atlas.exe"
+      },
+      {
+       "k": "d",
+       "t": "Only one Atlas instance running?",
+       "stop": "Atlas does not start"
+      },
+      {
+       "k": "d",
+       "t": "Valid license + authorizations on this PC?",
+       "stop": "Exits. Run License Activation to fix",
+       "no": "No"
+      },
+      {
+       "k": "d",
+       "t": "Local MongoDB service running?",
+       "stop": "Atlas cannot start without MongoDB"
+      },
+      {
+       "k": "p",
+       "t": "Sign in (Trimble Identity) and Force Sync"
+      },
+      {
+       "k": "s",
+       "t": "Main window: Product Details, My Service Cases, Dashboard"
+      }
+     ]
+    }
+   ],
+   "terms": [
+    "MongoDB (local)",
+    "Reset Almanac Offline"
+   ],
+   "quiz": {
+    "q": "Which is NOT checked at Atlas startup?",
+    "o": [
+     "Single running instance",
+     "Valid license + authorizations",
+     "MongoDB service available",
+     "That the Dashboard shows service cases"
+    ],
+    "a": 3,
+    "why": "Startup (App.xaml.cs) enforces single instance, license/authorizations and MongoDB."
+   },
+   "prompts": [
+    "What are the 4 things the Atlas installer puts on a PC?",
+    "What happens if MongoDB cannot start?",
+    "Walk me through each main menu item"
+   ]
+  },
+  {
+   "id": "atlas-access-and-licensing",
+   "icon": "🔐",
+   "title": "Sign-in vs. license vs. authorization",
+   "tag": "Why a login can still say 'no'",
+   "shot": "license-activation",
+   "hook": "Three different doors. You must pass all three.",
+   "points": [
+    "**Authentication** – who are you? (Trimble Identity / Login Service).",
+    "**Application license** – may THIS PC run Atlas? License Activation writes `AlmanacLicense.xml` to `%ProgramData%\\Trimble\\Almanac\\`.",
+    "**Product authorizations** – which product models may YOU service? (`AlmanacAuthorizations.xml`).",
+    "Activation modes: **Activate · Recover · Move · Renew**. License types: Internal, **Full external**, **Collimator**."
+   ],
+   "viz": {
+    "type": "steps",
+    "items": [
+     {
+      "i": "👤",
+      "t": "Door 1: Sign in",
+      "d": "Trimble Identity proves who you are."
+     },
+     {
+      "i": "🖥️",
+      "t": "Door 2: Machine license",
+      "d": "License file bound to this PC (fingerprint + machine name)."
+     },
+     {
+      "i": "🎓",
+      "t": "Door 3: Authorizations",
+      "d": "Which product models you may service."
+     },
+     {
+      "i": "✅",
+      "t": "Atlas features unlock",
+      "d": "AtlasFeature flags follow the license type."
+     }
+    ]
+   },
+   "terms": [
+    "Collimator license",
+    "EMS"
+   ],
+   "quiz": {
+    "q": "You signed in fine but cannot service a particular model. Most likely cause?",
+    "o": [
+     "Missing product authorization",
+     "MongoDB is empty",
+     "Network is offline",
+     "Wrong Windows version"
+    ],
+    "a": 0,
+    "why": "Sign-in ≠ license ≠ authorization. Authorizations are per product model."
+   },
+   "prompts": [
+    "Difference between authentication, license and authorization?",
+    "What do Activate / Recover / Move / Renew each do?",
+    "What can a collimator license NOT do?"
+   ]
+  },
+  {
+   "id": "technician-workflow",
+   "video": {
+    "key": "atlas",
+    "embed": false,
+    "chapters": [
+     "Technician workflow: identify, MTP, service case"
+    ]
+   },
+   "icon": "🛠️",
+   "title": "The technician's journey",
+   "tag": "Serial number → completed case",
+   "shot": "product-details",
+   "hook": "Follow one repair from the moment the instrument hits the bench. Click each stop.",
+   "points": [
+    "Everything the tech does is captured on a **service case** – the system of record for the visit.",
+    "Before a case is opened, Product Details shows **Overview · Service Bulletin · Service Case History**.",
+    "Atlas calls **MTP** to get sales + warranty info for the serial."
+   ],
+   "viz": {
+    "type": "steps",
+    "items": [
+     {
+      "i": "🔎",
+      "t": "1 Identify",
+      "d": "Type the serial number, or let detectors auto-detect the connected instrument."
+     },
+     {
+      "i": "📡",
+      "t": "2 Ask MTP",
+      "d": "Atlas pulls part number, model, ship date, warranty status & policies."
+     },
+     {
+      "i": "📋",
+      "t": "3 Review unit",
+      "d": "Overview, past cases (history) and applicable service bulletins."
+     },
+     {
+      "i": "📂",
+      "t": "4 Open case",
+      "d": "Open or create a service case. All activity is saved against it."
+     },
+     {
+      "i": "🔧",
+      "t": "5 Perform service",
+      "d": "Run operations, add parts, troubleshoot, calibrate, attach files."
+     },
+     {
+      "i": "💾",
+      "t": "6 Save & complete",
+      "d": "Results saved; history stays for later visits."
+     }
+    ]
+   },
+   "terms": [
+    "Service case",
+    "MTP",
+    "Detector"
+   ],
+   "quiz": {
+    "q": "Where does Atlas get warranty & sales data for a serial number?",
+    "o": [
+     "MongoDB only",
+     "MTP",
+     "eAtlas",
+     "The instrument firmware"
+    ],
+    "a": 1,
+    "why": "Atlas calls MTP (via OData) for sales/warranty by serial (and serial + part)."
+   },
+   "prompts": [
+    "Walk me through a full repair visit step by step",
+    "What does MTP return and why do we need it?",
+    "Why is everything saved against a service case?"
+   ]
+  },
+  {
+   "id": "service-case-details",
+   "icon": "🗂️",
+   "title": "Inside a service case",
+   "tag": "Accordion + task list + reports",
+   "shot": "service-case",
+   "hook": "Product Details = the unit. Service case = this visit. Don't mix them up.",
+   "points": [
+    "Service case = **accordion** of sections + a right-hand **Task list** (operations, parts, bulletins to perform).",
+    "Footer buttons depend on license + case state: Submit DWCR, Submit Service-Support, Complete, Save, Generate Report, Sync SWO.",
+    "**Complete** needs network → force-syncs → builds RDLC PDF reports.",
+    "Status: `ServiceCaseStatusId` 1 = Open, 2 = Closed. Closed cases are read-only."
+   ],
+   "viz": {
+    "type": "cards",
+    "items": [
+     {
+      "i": "🩺",
+      "t": "Troubleshooting",
+      "d": "Operations on tab 1 – verify the failure."
+     },
+     {
+      "i": "🧩",
+      "t": "Service Parts",
+      "d": "Parts used; feed report and DWCR."
+     },
+     {
+      "i": "📑",
+      "t": "Predefined Ops",
+      "d": "Catalog operations for the model."
+     },
+     {
+      "i": "⚙️",
+      "t": "Service Operations",
+      "d": "Plugin-driven calibration/repair; pass/fail XML."
+     },
+     {
+      "i": "📎",
+      "t": "Attachments",
+      "d": "Photos/PDFs on the case."
+     },
+     {
+      "i": "📜",
+      "t": "Reports",
+      "d": "Calibration, Advanced Calibration, Repair (Service Report)."
+     }
+    ]
+   },
+   "terms": [
+    "Task list",
+    "Service operation"
+   ],
+   "quiz": {
+    "q": "Which report needs ALL calibration operations executed successfully?",
+    "o": [
+     "Repair / ServiceReport.pdf",
+     "Calibration report",
+     "Attachment list",
+     "DWCR payload"
+    ],
+    "a": 1,
+    "why": "Calibration report is offered when calibration ops exist, are on the task list and all passed."
+   },
+   "prompts": [
+    "What is on the Task list and why?",
+    "Which reports exist and when is each offered?",
+    "Product Details vs service case – what's the difference?"
+   ]
+  },
+  {
+   "id": "service-content",
+   "icon": "📚",
+   "title": "Manuals, bulletins & downloads",
+   "tag": "Reading vs recording",
+   "shot": "bulletins",
+   "hook": "Reading a bulletin is not the same as applying it.",
+   "points": [
+    "**Service manuals** are product-level (feature `ServiceManuals`), not a case section.",
+    "**Service bulletins** come from TWoD. **Mandatory** ones must be marked **Applied** on the task list before a DWCR can use the bulletin warranty window.",
+    "**Downloads** = firmware/software for the product model. Different from **Attachments** (files the tech adds)."
+   ],
+   "viz": {
+    "type": "compare",
+    "lt": "Reading",
+    "rt": "Recording on the case",
+    "lc": "#3b82f6",
+    "rc": "#8b5cf6",
+    "rows": [
+     [
+      "Bulletin",
+      "Visible on Product Details > Service Bulletin",
+      "Marked Applied on the task list → flows into report & DWCR"
+     ],
+     [
+      "Files",
+      "Downloads: firmware/software for the model",
+      "Attachments: photos/PDFs the tech adds to the case"
+     ]
+    ]
+   },
+   "terms": [],
+   "quiz": {
+    "q": "What must be true of a mandatory bulletin to use the bulletin warranty window on a DWCR?",
+    "o": [
+     "It was downloaded",
+     "It is Applied on the task list",
+     "It was emailed",
+     "It is older than 2024"
+    ],
+    "a": 1,
+    "why": "Mandatory bulletins must be Applied on the task list."
+   },
+   "prompts": [
+    "Where do manuals, bulletins and downloads appear in the UI?",
+    "Why does 'Applied' matter for a bulletin?",
+    "Downloads vs attachments?"
+   ]
+  },
+  {
+   "id": "device-plugins",
+   "icon": "🔌",
+   "title": "Detectors & service operations (plugins)",
+   "tag": "How Atlas talks to instruments",
+   "shot": "operations",
+   "hook": "Atlas itself does not know how to calibrate an X9. Plugins do.",
+   "points": [
+    "Service Technologies ship **detectors** and **service operations** as Windows **DLLs/EXEs** every sprint.",
+    "They implement the **Almanac API** (`Trimble.Almanac.API`) and report **pass/fail XML** back.",
+    "Binaries are folded into the Atlas **installer**; **Almanac Portal** binds each file to a **product model**."
+   ],
+   "viz": {
+    "type": "steps",
+    "items": [
+     {
+      "i": "🏭",
+      "t": "Service Tech builds",
+      "d": "New/updated detector or operation binary."
+     },
+     {
+      "i": "📦",
+      "t": "Installer + Portal",
+      "d": "Shipped in installer; Portal maps file → product model."
+     },
+     {
+      "i": "🔽",
+      "t": "Metadata sync",
+      "d": "Technician PC learns which ops apply to the model."
+     },
+     {
+      "i": "▶️",
+      "t": "Tech runs it",
+      "d": "Atlas loads the plugin; it talks to the instrument."
+     },
+     {
+      "i": "📬",
+      "t": "Result",
+      "d": "Pass/fail XML becomes case actions."
+     }
+    ]
+   },
+   "terms": [
+    "Detector",
+    "Service operation",
+    "Almanac API"
+   ],
+   "quiz": {
+    "q": "Why is Atlas Windows-only?",
+    "o": [
+     "WPF is trendy",
+     "It loads native Windows DLL/EXE plugins that talk to devices",
+     "MongoDB requires it",
+     "Licenses are Windows-only"
+    ],
+    "a": 1,
+    "why": "The native plugin model is why Atlas is not web/cross-platform."
+   },
+   "prompts": [
+    "Detector vs service operation?",
+    "How does a new operation reach a technician's PC?",
+    "What is the Almanac API contract?"
+   ]
+  },
+  {
+   "id": "warranty-and-support",
+   "icon": "💰",
+   "title": "DWCR vs Service-Support",
+   "tag": "Two buttons, two destinations",
+   "shot": "dwcr",
+   "hook": "Same case, two very different exits. Do not mix them up!",
+   "points": [
+    "**DWCR** → claim into **MTP**, external technicians only, completes the case on success.",
+    "**Service-Support** → Salesforce Case, internal users only, does NOT complete the case.",
+    "Neither goes through OData for the actual submit. Both need network."
+   ],
+   "viz": [
+    {
+     "type": "compare",
+     "lt": "DWCR 🧾",
+     "rt": "Service-Support 🆘",
+     "lc": "#d4893a",
+     "rc": "#3b82f6",
+     "rows": [
+      [
+       "Who",
+       "External technicians (License External)",
+       "Internal Trimble users"
+      ],
+      [
+       "Goes to",
+       "MTP (warranty claim service)",
+       "Salesforce / TWoD (Case)"
+      ],
+      [
+       "Purpose",
+       "Commercial close of an in-warranty repair",
+       "Ask for repair assistance"
+      ],
+      [
+       "Case outcome",
+       "Case auto-completes on SUCCESS",
+       "Case stays open"
+      ],
+      [
+       "Needs",
+       "Network, same dealer, authorized, warranty path",
+       "Network, no existing support row"
+      ]
+     ]
+    },
+    {
+     "type": "flowchart",
+     "title": "Submit DWCR: the gates, in order (docs: 01 Atlas application)",
+     "items": [
+      {
+       "k": "s",
+       "t": "Technician selects Submit DWCR"
+      },
+      {
+       "k": "d",
+       "t": "Network available?",
+       "stop": "Blocked: DWCR needs network"
+      },
+      {
+       "k": "d",
+       "t": "Case open and same dealer? External tech authorized on model?",
+       "stop": "Button hidden or blocked"
+      },
+      {
+       "k": "d",
+       "t": "Warranty path: in warranty, or mandatory bulletin Applied, or previous repair?",
+       "stop": "Not eligible for a claim"
+      },
+      {
+       "k": "d",
+       "t": "Registered / unregistered, labour within MaxLabourhours?",
+       "stop": "Fix the form or product registration"
+      },
+      {
+       "k": "p",
+       "t": "POST WarrantyClaimDetails to MTP (access token)"
+      },
+      {
+       "k": "d",
+       "t": "MTP status == SUCCESS?",
+       "stop": "Show MTP messages or use MTP portal"
+      },
+      {
+       "k": "s",
+       "t": "Save ServiceCaseDWCRClaim, then complete the case"
+      }
+     ]
+    }
+   ],
+   "terms": [
+    "DWCR",
+    "Service-Support"
+   ],
+   "quiz": {
+    "q": "After a successful DWCR submit, the service case is…",
+    "o": [
+     "Left open",
+     "Deleted",
+     "Completed automatically",
+     "Sent to Salesforce"
+    ],
+    "a": 2,
+    "why": "'Service Case will be Completed once DWCR is submitted.'"
+   },
+   "prompts": [
+    "What gates must pass before the DWCR form opens?",
+    "What is the warranty exception priority?",
+    "How does Service-Support create a Salesforce case?"
+   ]
+  },
+  {
+   "id": "baseline-calibration",
+   "covers": [
+    "bcs-notifications"
+   ],
+   "icon": "🎯",
+   "title": "Baseline Calibration (BCS)",
+   "tag": "Calibration sites & notifications",
+   "shot": "bcs",
+   "hook": "BCS is a separate tool launched from Atlas Settings; its backend is eAtlas.",
+   "points": [
+    "Calibrates **X/SX** instruments at **calibration sites**; for service providers only.",
+    "A daily **BCS sync job** drives monitoring/calibration alerts in Atlas.",
+    "**Level 3** notification can **block creating/opening service cases** (with documented exceptions). `CalibrationFailSafe` is the safety valve.",
+    "Reminder (monitoring) ≠ blockage (Level 3). Read `bcs-notifications.md` for exact rules."
+   ],
+   "viz": {
+    "type": "steps",
+    "items": [
+     {
+      "i": "⚙️",
+      "t": "Settings",
+      "d": "Technician launches BCS from Atlas Settings."
+     },
+     {
+      "i": "🌐",
+      "t": "eAtlas API",
+      "d": "Sites, measurements, reference instruments live in eAtlas."
+     },
+     {
+      "i": "🔔",
+      "t": "Notifications",
+      "d": "Daily BCS sync produces monitoring/calibration alerts."
+     },
+     {
+      "i": "⛔",
+      "t": "Level 3",
+      "d": "Case creation/opening blocked (documented exceptions)."
+     }
+    ]
+   },
+   "terms": [
+    "BCS"
+   ],
+   "quiz": {
+    "q": "Which BCS state can block opening service cases?",
+    "o": [
+     "Any reminder",
+     "Level 3",
+     "Level 1",
+     "Offline mode"
+    ],
+    "a": 1,
+    "why": "Level 3 blockage is the documented case-opening block."
+   },
+   "prompts": [
+    "What does BCS calibrate and who can launch it?",
+    "Monitoring reminder vs Level 3 – what's the difference?",
+    "What is CalibrationFailSafe?"
+   ]
+  },
+  {
+   "id": "desktop-ai-assistant",
+   "icon": "🤖",
+   "title": "Repair Assistant (Agentic AI)",
+   "tag": "When the chat button appears",
+   "shot": "ai-chat",
+   "hook": "The AI only helps for the unit you are servicing – it gets the model + that model's manual names.",
+   "points": [
+    "Chat runs in `AIChatWindow` (WebView2) via `AtlasAIChatProvider`.",
+    "Button shows only if: user flag `isAIChatEnabled`, product model + ≥1 classified manual, serial status not hidden, and end-of-support not before 2024-01-01.",
+    "Context passed: **product model** + comma-separated **manual filenames**. Changing product closes the session.",
+    "The assistant prompt is stored in `AgenticAIIntegrations/AtlasRepairAssistant.txt` (one search per question, no cross-model mixing)."
+   ],
+   "viz": {
+    "type": "steps",
+    "items": [
+     {
+      "i": "✔️",
+      "t": "Eligible?",
+      "d": "Flags + model + manual present + status ok."
+     },
+     {
+      "i": "📌",
+      "t": "Context",
+      "d": "Model + manual names go to the agent."
+     },
+     {
+      "i": "💬",
+      "t": "Ask",
+      "d": "Technician chats; agent searches ONE library per question."
+     },
+     {
+      "i": "📖",
+      "t": "Answer",
+      "d": "Steps from the matching manual, or a polite 'cannot find'."
+     }
+    ]
+   },
+   "terms": [
+    "Agentic AI"
+   ],
+   "quiz": {
+    "q": "What product context is passed to the Repair Assistant?",
+    "o": [
+     "The whole database",
+     "Product model + its manual filenames",
+     "Only the serial number",
+     "Technician password"
+    ],
+    "a": 1,
+    "why": "Model + comma-separated service-manual filenames."
+   },
+   "prompts": [
+    "When does the Repair Assistant button show?",
+    "How do manuals/bulletins reach the assistant?",
+    "What are the assistant's guardrails?"
+   ]
+  },
+  {
+   "id": "offline-and-sync",
+   "icon": "📶",
+   "title": "Offline mode & Force Sync",
+   "tag": "Why MongoDB lives on the PC",
+   "shot": "offline",
+   "hook": "Atlas keeps a local copy so you can keep working when the network drops.",
+   "points": [
+    "When the network drops, Atlas uses **MongoDB** (`AlmanacOfflineService`) through the same interface.",
+    "**Works offline** (after a prior sync): identify cached unit, open/edit case, add ops/parts/bulletins/attachments, save.",
+    "**Needs online**: Complete case, Submit DWCR, Generate Report, Submit Service-Support, Force Sync."
+   ],
+   "viz": {
+    "type": "steps",
+    "items": [
+     {
+      "i": "1️⃣",
+      "t": "LoginSession",
+      "d": "OFFLINE_TO_OFFLINE bookkeeping."
+     },
+     {
+      "i": "2️⃣",
+      "t": "MTPInfo",
+      "d": "USER_OFFLINE_DATA – slowest step (~30 s)."
+     },
+     {
+      "i": "3️⃣",
+      "t": "DWCR claims",
+      "d": "OFFLINE_TO_ONLINE push."
+     },
+     {
+      "i": "4️⃣",
+      "t": "Transactional (11)",
+      "d": "Service cases, parts, attachments… up then refresh."
+     },
+     {
+      "i": "5️⃣",
+      "t": "Metadata (55)",
+      "d": "Catalog tables – daily."
+     },
+     {
+      "i": "6️⃣",
+      "t": "Lookups (17)",
+      "d": "Types/origins/CFG groups – weekly."
+     }
+    ]
+   },
+   "terms": [
+    "Force Sync",
+    "MongoDB (local)"
+   ],
+   "quiz": {
+    "q": "Which action requires network?",
+    "o": [
+     "Edit an open case",
+     "Add a part",
+     "Complete the case",
+     "Save the case"
+    ],
+    "a": 2,
+    "why": "Complete case, DWCR, report, Service-Support and Force Sync all need network."
+   },
+   "prompts": [
+    "Walk me through the Force Sync order",
+    "What can and can't I do offline?",
+    "How is offline different from a normal online call?"
+   ]
+  },
+  {
+   "id": "installation-and-recovery",
+   "icon": "🧯",
+   "title": "Recovery & environments",
+   "tag": "Reset vs Environment Switch",
+   "shot": "recovery",
+   "hook": "Two rescue tools that look similar and are NOT.",
+   "points": [
+    "**Reset Almanac Offline** wipes local MongoDB; next login Force Sync rebuilds it. Safe for field techs.",
+    "**Environment Switch** points an install at prod/stage/dev. **Internal tool only** – never point a field technician at stage/dev.",
+    "Never commit or paste connection strings, tokens or overlay-config secrets."
+   ],
+   "viz": {
+    "type": "compare",
+    "lt": "Reset Almanac Offline ♻️",
+    "rt": "Environment Switch 🔀",
+    "lc": "#2a9d8f",
+    "rc": "#d4893a",
+    "rows": [
+     [
+      "Does",
+      "Drops local MongoDB",
+      "Changes which server Atlas talks to"
+     ],
+     [
+      "Who",
+      "Technician / support",
+      "Internal engineers only"
+     ],
+     [
+      "Result",
+      "Fresh data after next sync",
+      "Install now uses prod / stage / dev"
+     ]
+    ]
+   },
+   "terms": [
+    "Reset Almanac Offline",
+    "Environment Switch"
+   ],
+   "quiz": {
+    "q": "Local data seems corrupt. Which tool?",
+    "o": [
+     "Environment Switch",
+     "Reset Almanac Offline",
+     "License Activation 'Move'",
+     "Delete Atlas.sln"
+    ],
+    "a": 1,
+    "why": "Reset wipes MongoDB and the next login rebuilds it from OData."
+   },
+   "prompts": [
+    "What exactly does Reset delete?",
+    "Why is Environment Switch internal only?",
+    "What gets installed with Atlas?"
+   ]
+  },
+  {
+   "id": "eatlas-overview",
+   "video": {
+    "key": "eatlas",
+    "embed": true,
+    "chapters": [
+     "Introduction to eAtlas",
+     "Service Cases"
+    ]
+   },
+   "icon": "🌐",
+   "title": "What is eAtlas?",
+   "tag": "The manager's browser app",
+   "shot": "eatlas-dashboard",
+   "hook": "Atlas is the technician's workshop. eAtlas is the manager's control tower.",
+   "points": [
+    "Web app for **service managers** and company users: company cases, licenses, assigning cases.",
+    "Signs in with **Trimble Identity (OAuth2)** – not the OData token.",
+    "Also a **content & ops** site: manuals, bulletins, GS info, downloads, labor time guide, instrument constants, user admin, authorizations.",
+    "**Secondary backend** for desktop; also the **Dashboard** embedded in Atlas."
+   ],
+   "viz": {
+    "type": "compare",
+    "lt": "Atlas desktop 🖥️",
+    "rt": "eAtlas web 🌐",
+    "lc": "#3b82f6",
+    "rc": "#8b5cf6",
+    "rows": [
+     [
+      "Main user",
+      "Technician",
+      "Service manager (and company users)"
+     ],
+     [
+      "Runs on",
+      "Windows (WPF)",
+      "Browser (ASP.NET Core 3.1 + React/Vite)"
+     ],
+     [
+      "Core job",
+      "Repair an instrument",
+      "See & assign cases, licenses, content"
+     ],
+     [
+      "Backend",
+      "OData (primary)",
+      "Own REST API, same SQL"
+     ]
+    ]
+   },
+   "terms": [
+    "eAtlas"
+   ],
+   "quiz": {
+    "q": "How do eAtlas users sign in?",
+    "o": [
+     "Almanac OData token",
+     "Trimble Identity (OAuth2)",
+     "Windows license file",
+     "MongoDB user"
+    ],
+    "a": 1,
+    "why": "eAtlas uses Trimble Identity, not the OData token."
+   },
+   "prompts": [
+    "Who uses eAtlas and for what?",
+    "What is the Dashboard inside Atlas?",
+    "How does eAtlas differ from desktop Atlas?"
+   ]
+  },
+  {
+   "id": "eatlas-management",
+   "video": {
+    "key": "eatlas",
+    "embed": true,
+    "chapters": [
+     "Service Cases"
+    ]
+   },
+   "icon": "👔",
+   "title": "Assigning cases",
+   "tag": "Manager click → technician's list",
+   "shot": "eatlas-assign",
+   "hook": "A manager assigns a case; it appears in the technician's My Service Cases. Same SQL row.",
+   "points": [
+    "`POST api/User/AssignServicecase` updates `ServiceCase.AssignedToUserId` and writes `AssignedToUserTrack`.",
+    "OData `ServiceCasesController` does **not overwrite assignment** on PUT, so tech syncs can't clobber it.",
+    "Assign is enabled on categories such as **My Open Cases** and **Team Open Cases**.",
+    "Blocked if target is not trained for the product (unless force-assign / internal user)."
+   ],
+   "viz": {
+    "type": "steps",
+    "items": [
+     {
+      "i": "👔",
+      "t": "Manager",
+      "d": "Opens Dashboard in eAtlas."
+     },
+     {
+      "i": "🖱️",
+      "t": "Assign to…",
+      "d": "AssignToDialog → UserController.AssignServicecase."
+     },
+     {
+      "i": "🗄️",
+      "t": "Shared SQL",
+      "d": "AssignedToUserId updated (+ track row)."
+     },
+     {
+      "i": "🔄",
+      "t": "Next sync",
+      "d": "Technician's Atlas loads the case."
+     },
+     {
+      "i": "🧑‍🔧",
+      "t": "My Service Cases",
+      "d": "Case shows up for the tech."
+     }
+    ]
+   },
+   "terms": [],
+   "quiz": {
+    "q": "Why isn't a manager's assignment overwritten when a tech syncs?",
+    "o": [
+     "It is, always",
+     "OData PUT does not overwrite AssignedToUserId",
+     "Mongo blocks it",
+     "eAtlas locks the DB"
+    ],
+    "a": 1,
+    "why": "OData ServiceCasesController deliberately ignores assignment on PUT."
+   },
+   "prompts": [
+    "Trace an assignment from eAtlas to the technician",
+    "When can an assignment be blocked?",
+    "What is one shared database and why?"
+   ]
+  },
+  {
+   "id": "eatlas-content",
+   "video": {
+    "key": "eatlas",
+    "embed": true,
+    "chapters": [
+     "Documentation and Application Routing Pages",
+     "Technical Data and Files",
+     "User Management & Access Control",
+     "Licenses and Training Data"
+    ]
+   },
+   "icon": "🗃️",
+   "title": "Content, users & authorizations",
+   "tag": "Beyond case assignment",
+   "shot": "eatlas-content",
+   "hook": "The web side owns the admin & content surfaces.",
+   "points": [
+    "SPA routes: Dashboard, License, User admin/roles, Authorization, Manuals, Bulletins, GS info, Downloads, Labor time guide, Instrument constants.",
+    "License page shows company licenses: holder, expiry, machine, activation code.",
+    "Web visibility ≠ desktop activation: seeing a license in eAtlas doesn't activate a PC."
+   ],
+   "viz": {
+    "type": "cards",
+    "items": [
+     {
+      "i": "📊",
+      "t": "Dashboard",
+      "d": "My/team/all open & closed cases."
+     },
+     {
+      "i": "🪪",
+      "t": "License",
+      "d": "Who holds which license, expiry, machine."
+     },
+     {
+      "i": "👥",
+      "t": "Users & roles",
+      "d": "Module roles per company."
+     },
+     {
+      "i": "🎓",
+      "t": "Authorization",
+      "d": "Product & training authorizations."
+     },
+     {
+      "i": "📘",
+      "t": "Manuals/Bulletins",
+      "d": "Service content + GS info + downloads."
+     },
+     {
+      "i": "⏱️",
+      "t": "Labor time guide",
+      "d": "Labor guidance."
+     }
+    ]
+   },
+   "terms": [],
+   "quiz": {
+    "q": "Does viewing a license in eAtlas activate Atlas on a PC?",
+    "o": [
+     "Yes",
+     "No – activation is done by License Activation on that PC",
+     "Only for managers",
+     "Only collimator"
+    ],
+    "a": 1,
+    "why": "Web visibility is distinct from desktop activation."
+   },
+   "prompts": [
+    "What pages does eAtlas have?",
+    "Where do manuals get uploaded?",
+    "Which controllers does the desktop call?"
+   ]
+  },
+  {
+   "id": "atlas-eatlas-architecture",
+   "video": {
+    "key": "architecture",
+    "embed": true,
+    "chapters": [
+     "Connecting Trimble hardware to the cloud"
+    ]
+   },
+   "icon": "🗺️",
+   "title": "The whole map",
+   "tag": "Click any node!",
+   "shot": "architecture",
+   "hook": "One shared SQL database; two backends; one local MongoDB per PC.",
+   "points": [
+    "Atlas.exe → **OData** (primary) and **eAtlas /api** (secondary) + embedded Dashboard.",
+    "OData and eAtlas share the **same SQL database** (EF6 vs EF Core). There is no separate eAtlas DB.",
+    "**TWoD sync** fills SQL daily; **EMS** supplies license entitlements.",
+    "_Assumption note:_ this diagram is redrawn from the ASCII diagrams in the repo docs (the Lucid chart is not available)."
+   ],
+   "viz": {
+    "type": "arch"
+   },
+   "terms": [
+    "OData Service",
+    "TWoD"
+   ],
+   "quiz": {
+    "q": "How many databases do OData and eAtlas use between them (server side)?",
+    "o": [
+     "Two separate",
+     "One shared Atlas SQL catalog",
+     "MongoDB only",
+     "Salesforce only"
+    ],
+    "a": 1,
+    "why": "Both point at the same Atlas SQL database."
+   },
+   "prompts": [
+    "Trace what happens from login to Force Sync",
+    "Why two backends?",
+    "Where does catalog data originate?"
+   ]
+  },
+  {
+   "id": "master-data-sync",
+   "covers": [
+    "bulletin-email-notifications",
+    "ai-knowledge-sync"
+   ],
+   "icon": "⏰",
+   "title": "The daily schedule",
+   "tag": "05:00 Salesforce → 06:00 AI",
+   "shot": "jobs",
+   "hook": "Background jobs run in order; later ones wait for earlier ones.",
+   "points": [
+    "**TWoD Master Data Sync** (Azure WebJob) runs daily **05:00**, incremental by `LastSyncTime` watermark.",
+    "**Atlas AI Sync** timer runs **06:00 UTC** – only after TWoD wrote `ServiceBulletin` for the day.",
+    "Bulletin **emails** also depend on TWoD ingest, then recipient filtering and duplicate tracking.",
+    "Atlas desktop later pulls the catalog with **Force Sync**."
+   ],
+   "viz": {
+    "type": "timeline",
+    "items": [
+     {
+      "time": "05:00",
+      "c": "#2a9d8f",
+      "t": "TWoD Master Data Sync",
+      "d": "Salesforce → Atlas SQL: companies, users, catalog, BOMs, bulletins, authorizations, sites."
+     },
+     {
+      "time": "after",
+      "c": "#c9a227",
+      "t": "Bulletin email notification",
+      "d": "Emails NEW bulletins to subscribed, authorized users (not everyone!)."
+     },
+     {
+      "time": "06:00 UTC",
+      "c": "#6366a8",
+      "t": "Atlas AI Sync",
+      "d": "Bulletins → Agentic KB. Manuals sync on upload instead."
+     },
+     {
+      "time": "next sync",
+      "c": "#3b82f6",
+      "t": "Desktop Force Sync",
+      "d": "Technician PC copies the fresh catalog into MongoDB."
+     }
+    ]
+   },
+   "terms": [
+    "TWoD",
+    "Agentic AI"
+   ],
+   "quiz": {
+    "q": "Why does AI Sync run AFTER TWoD sync?",
+    "o": [
+     "Random",
+     "Bulletins must be in SQL for that day first",
+     "Salesforce is slow",
+     "Manuals need it"
+    ],
+    "a": 1,
+    "why": "Bulletin ingest waits for the TWoD ServiceBulletin write."
+   },
+   "prompts": [
+    "Why might a bulletin show in Atlas but not trigger an email for everyone?",
+    "How do manuals reach the AI assistant?",
+    "What is the TWoD watermark?"
+   ]
+  },
+  {
+   "id": "ems-licensing",
+   "covers": [
+    "instrument-service-licenses"
+   ],
+   "icon": "🎫",
+   "title": "Two kinds of license",
+   "tag": "App seat vs instrument key",
+   "shot": "licenses",
+   "hook": "A seat lets you RUN Atlas. A service key lets the INSTRUMENT do everything on the bench.",
+   "points": [
+    "External purchase: **Oracle** → middleware → **EMS v4** → `AtlasEMSIntegrationService` → OData `EMSV4Controller` → License Activation. (Poseidon is legacy.)",
+    "SKUs: `GS-ATLASLICENSE` (full external), `GS-ATLASCOLLIMLICENS` (collimator).",
+    "**License Generator Service** asks **OKWS** for a temporary instrument service key (full features or serial change); instrument falls back to purchased config after."
+   ],
+   "viz": {
+    "type": "compare",
+    "lt": "Atlas application seat 🪑",
+    "rt": "Instrument service license 🔑",
+    "lc": "#3b82f6",
+    "rc": "#8b5cf6",
+    "rows": [
+     [
+      "Licenses",
+      "Atlas.exe on a PC",
+      "A single instrument in the shop"
+     ],
+     [
+      "System",
+      "EMS v4",
+      "OKWS (via License Generator Service)"
+     ],
+     [
+      "Why",
+      "Right to run Atlas",
+      "Test all HaaS capabilities / change serial safely"
+     ]
+    ]
+   },
+   "terms": [
+    "EMS",
+    "OKWS"
+   ],
+   "quiz": {
+    "q": "Which system issues an instrument service key?",
+    "o": [
+     "EMS",
+     "OKWS via License Generator Service",
+     "Oracle",
+     "Mongo"
+    ],
+    "a": 1,
+    "why": "Atlas never generates the key itself; OKWS does."
+   },
+   "prompts": [
+    "From purchase to working Atlas license?",
+    "What does Hardware-as-a-Service change?",
+    "EMS vs License Generator?"
+   ]
+  },
+  {
+   "id": "instrument-constants-pipeline",
+   "icon": "📏",
+   "title": "Instrument constants pipeline",
+   "tag": "Watcher uploads, Comparer verifies",
+   "shot": "constants",
+   "hook": "One uploads; the other double-checks. They are separate on purpose.",
+   "points": [
+    "**File System Watcher**: daily upload of instrument-constant files to eAtlas.",
+    "**File Comparer**: daily verification of those files against S3.",
+    "Instrument constants are NOT catalog data (that's TWoD)."
+   ],
+   "viz": {
+    "type": "steps",
+    "items": [
+     {
+      "i": "📁",
+      "t": "Files appear",
+      "d": "Instrument constant files on the watched location."
+     },
+     {
+      "i": "⬆️",
+      "t": "Watcher",
+      "d": "Uploads daily to eAtlas."
+     },
+     {
+      "i": "☁️",
+      "t": "S3",
+      "d": "Storage."
+     },
+     {
+      "i": "⚖️",
+      "t": "Comparer",
+      "d": "Verifies files vs S3; flags mismatches."
+     }
+    ]
+   },
+   "terms": [],
+   "quiz": {
+    "q": "What does File Comparer do?",
+    "o": [
+     "Uploads files",
+     "Verifies uploaded files against S3",
+     "Emails users",
+     "Syncs Salesforce"
+    ],
+    "a": 1,
+    "why": "Watcher uploads; Comparer verifies."
+   },
+   "prompts": [
+    "Why two separate jobs?",
+    "How do constants reach the technician?",
+    "What happens on a mismatch?"
+   ]
+  },
+  {
+   "id": "global-service-boundaries",
+   "icon": "🌍",
+   "title": "Global Service & friends",
+   "tag": "APIs for OTHER teams",
+   "shot": "global",
+   "hook": "Not every API is for the desktop.",
+   "points": [
+    "**Atlas Global Service** = thin HTTP API for other Trimble teams: latest calibration report PDF, recent closed cases, Sentinel open-case check.",
+    "It is NOT the desktop's OData client and NOT eAtlas.",
+    "**Service Bulletin Notification** emails new bulletins; **AI Sync** feeds the Repair Assistant KB."
+   ],
+   "viz": {
+    "type": "cards",
+    "items": [
+     {
+      "i": "🌍",
+      "t": "Global Service",
+      "d": "External-team HTTP API."
+     },
+     {
+      "i": "📧",
+      "t": "Bulletin emails",
+      "d": "Subscribed + authorized users."
+     },
+     {
+      "i": "🧠",
+      "t": "AI Sync",
+      "d": "Manuals + bulletins → Agentic KB (Durable Functions)."
+     },
+     {
+      "i": "🔀",
+      "t": "Env Switch",
+      "d": "Internal: prod/stage/dev."
+     }
+    ]
+   },
+   "terms": [
+    "Global Service"
+   ],
+   "quiz": {
+    "q": "Is Atlas Global Service the same as OData?",
+    "o": [
+     "Yes",
+     "No – it serves other Trimble teams",
+     "It replaces eAtlas",
+     "It is Mongo"
+    ],
+    "a": 1,
+    "why": "It's a separate thin API for external consumers."
+   },
+   "prompts": [
+    "What can other teams get from Global Service?",
+    "How do the supporting jobs relate?",
+    "Give me a one-page map of all the satellites"
+   ]
+  },
+  {
+   "id": "documentation-investigation",
+   "icon": "🧾",
+   "title": "Capstone: investigate with evidence",
+   "tag": "Docs first, then conclude",
+   "shot": null,
+   "hook": "Pick a symptom. Trace it through the documents. Say clearly what is proven, what is a guess, and what is missing.",
+   "points": [
+    "Follow one repair across **desktop**, **local MongoDB**, the shared **SQL database** and the services around it.",
+    "A **network loss** or a **BCS Level 3** alert explains a documented restriction. It does not prove the cause of a real failure.",
+    "Always write three lists: **supported explanation**, **hypothesis**, **missing evidence**.",
+    "Cite the document and section for every claim. Never change or run product code while learning."
+   ],
+   "viz": {
+    "type": "steps",
+    "items": [
+     {
+      "i": "",
+      "t": "Symptom",
+      "d": "A blocked step or a 'how does this work' question."
+     },
+     {
+      "i": "",
+      "t": "Documents",
+      "d": "Read the project doc and the Functionality doc for that area."
+     },
+     {
+      "i": "",
+      "t": "Boundaries",
+      "d": "Local MongoDB, OData, eAtlas/shared SQL, or direct MTP for DWCR."
+     },
+     {
+      "i": "",
+      "t": "Evidence",
+      "d": "Quote the document section. Note any inspected code symbol."
+     },
+     {
+      "i": "",
+      "t": "Conclude",
+      "d": "Fact, hypothesis and the one missing piece of evidence."
+     }
+    ]
+   },
+   "terms": [],
+   "quiz": {
+    "q": "A case cannot be completed after a BCS Level 3 alert. What is the best answer?",
+    "o": [
+     "The database is corrupt",
+     "The documented Level 3 restriction applies; say what evidence is still missing",
+     "Reset MongoDB",
+     "Switch environment"
+    ],
+    "a": 1,
+    "why": "Explain the documented behaviour, label it as a hypothesis, and list the missing evidence."
+   },
+   "prompts": [
+    "Trace a DWCR submit end to end using only the documents",
+    "Quiz me on the whole map"
+   ],
+   "try": "Pick one starter prompt and write down which document section supports each sentence of the answer."
+  },
+  {
+   "id": "code-map",
+   "icon": "🗺️",
+   "title": "Repo treasure map",
+   "tag": "Where is everything?",
+   "shot": null,
+   "hook": "Open `Atlas.sln` in Visual Studio. Prefer the current trees; avoid legacy folders.",
+   "points": [
+    "Open root **`Atlas.sln`** (nested .sln files are leftovers).",
+    "Prefer `AlmanacApp/Almanac`, `AlmanacApp/AlmanacODataService`, `AtlasWeb/eAtlas`, `AgenticAIIntegrations/`.",
+    "AVOID `AlmanacShell`, `AlmanacShell-PreV5`, `Services-PreV5` unless explicitly legacy.",
+    "Current service-case UI is **`AlmanacProductDetails`**, not the old Repair Action modules."
+   ],
+   "viz": {
+    "type": "tree",
+    "root": "atlas_v2.0/",
+    "items": [
+     [
+      "AlmanacApp/Almanac",
+      "🖥️ Desktop app (Atlas.exe, WPF)"
+     ],
+     [
+      "AlmanacApp/AlmanacODataService",
+      "🔌 Primary backend (/odata on IIS)"
+     ],
+     [
+      "AlmanacApp/Almanac.License.Activation",
+      "🔐 Machine license companion"
+     ],
+     [
+      "AlmanacApp/ResetAlmanacOffline",
+      "♻️ Wipes local MongoDB"
+     ],
+     [
+      "AlmanacApp/AlmanacAPI",
+      "🔌 Plugin contract (detectors / operations)"
+     ],
+     [
+      "AtlasWeb/eAtlas",
+      "🌐 Web app: ASP.NET Core + React/Vite"
+     ],
+     [
+      "AlmanacTools/",
+      "🛠️ TWoD sync, BCS, Global Service, watcher jobs"
+     ],
+     [
+      "AgenticAIIntegrations/",
+      "🤖 AtlasAISyncService + AtlasRepairAssistant.txt"
+     ],
+     [
+      "LicenseGeneratorService/",
+      "🎫 Instrument service licenses"
+     ],
+     [
+      "AtlasEMSIntegrationService/",
+      "🪑 EMS v4 integration"
+     ],
+     [
+      "docs/",
+      "📚 Project docs – read these first!"
+     ],
+     [
+      "AGENTS.md",
+      "📝 Naming + do/don't rules"
+     ]
+    ]
+   },
+   "terms": [],
+   "quiz": {
+    "q": "Which folder holds the CURRENT service-case UI?",
+    "o": [
+     "AlmanacShell",
+     "Modules/AlmanacProductDetails",
+     "Services-PreV5",
+     "AlmanacShell-PreV5"
+    ],
+    "a": 1,
+    "why": "AGENTS.md: current service-case UI is AlmanacProductDetails."
+   },
+   "prompts": [
+    "Which solution do I open and what do I avoid?",
+    "Show me where the OData service entry project is",
+    "Where do docs for each project live?"
+   ],
+   "try": "Open Atlas.sln → Solution Explorer → find the folders AtlasApplication, ODataService, eAtlasApplication.",
+   "extraSrc": [
+    "AGENTS.md",
+    "docs/README.md"
+   ]
+  },
+  {
+   "id": "code-desktop",
+   "icon": "🖥️",
+   "title": "Inside AlmanacApp/Almanac",
+   "tag": "Modules, Services, Messages",
+   "shot": null,
+   "hook": "A WPF shell that loads feature modules, backed by shared services.",
+   "points": [
+    "Entry: `AlmanacApp/Almanac/Almanac/Almanac.csproj` → `Atlas.exe`.",
+    "`App.xaml.cs` enforces single instance + license + MongoDB.",
+    "`AlmanacViewViewModel.CreateViewInstances` builds Dashboard, Product, My Cases, Help, About, Settings. Dashboard & Product trigger 2 eAtlas calls each."
+   ],
+   "viz": {
+    "type": "tree",
+    "root": "AlmanacApp/Almanac/",
+    "items": [
+     [
+      "Almanac/",
+      "Shell: startup, splash, login host, main window"
+     ],
+     [
+      "Modules/AlmanacProductDetails",
+      "💎 Heart of Atlas: product, service case, ops, parts, DWCR, reports"
+     ],
+     [
+      "Modules/AlmanacMyServiceCases",
+      "Technician's case list"
+     ],
+     [
+      "Modules/AlmanacDashBoardLibrary",
+      "Embedded Chromium → eAtlas"
+     ],
+     [
+      "Modules/ProductDetection",
+      "Auto-detect connected products"
+     ],
+     [
+      "Services/AlmanacCommonService",
+      "OData, sync, logging, network, PASS, MTP helpers"
+     ],
+     [
+      "Services/AlmanacSyncService",
+      "Offline/online sync"
+     ],
+     [
+      "Services/AlmanacOfflineService",
+      "Local MongoDB operations"
+     ],
+     [
+      "Services/LicenseManager",
+      "License consumption in-app"
+     ],
+     [
+      "Messages/",
+      "Request/response layer to OData or Mongo"
+     ],
+     [
+      "Container/",
+      "In-memory product / case state (MTPInfo…)"
+     ],
+     [
+      "Reports/CalibrationReports",
+      "RDLC PDF reports"
+     ],
+     [
+      "Core/",
+      "Shared UI, converters, AtlasFeature flags"
+     ]
+    ]
+   },
+   "terms": [],
+   "quiz": {
+    "q": "Where would you look for the Submit DWCR UI?",
+    "o": [
+     "Modules/AlmanacProductDetails (WarrantyClaimView)",
+     "Reports/",
+     "ResetAlmanacOffline",
+     "AtlasWeb"
+    ],
+    "a": 0,
+    "why": "WarrantyClaimController / WarrantyClaimView live in Product Details."
+   },
+   "prompts": [
+    "Show me how ServiceCaseViewModel generates reports",
+    "How does App.xaml.cs enforce startup rules?",
+    "Where are AtlasFeature flags loaded?"
+   ],
+   "try": "Search for `CreateViewInstances` and `ForceSync` in the solution (Ctrl+Shift+F)."
+  },
+  {
+   "id": "code-messages",
+   "icon": "📨",
+   "title": "The Messages layer",
+   "tag": "Cache or Server? Try it!",
+   "shot": null,
+   "hook": "Messages are NOT toasts. They are request/response classes: each decides cache vs server.",
+   "points": [
+    "Each class inherits `BaseMessage`; `MessageTransactions` is the facade Product Details calls.",
+    "`DataSource`: **Cache**, **Server**, **CacheOrServer**, **ServerOrCache**; `MODE`: `OFFLINE_RET` / `ONLINE_RET`.",
+    "Different from `MessageOverlay` (UI dialogs) and `SyncMessages` (Force Sync workers) – three 'message' families!"
+   ],
+   "viz": {
+    "type": "datasource"
+   },
+   "terms": [],
+   "quiz": {
+    "q": "CacheOrServer with an EMPTY Mongo and network online does what?",
+    "o": [
+     "Fails",
+     "Calls OData",
+     "Shows an overlay",
+     "Clears Mongo"
+    ],
+    "a": 1,
+    "why": "Try Mongo first; if empty, call OData."
+   },
+   "prompts": [
+    "What's the difference between Messages, MessageOverlay and SyncMessages?",
+    "Show me a Get and a Save message class",
+    "How does MessageTransactions route a call?"
+   ],
+   "try": "Find `BaseMessage` and read `ProcessMessage`."
+  },
+  {
+   "id": "code-backends",
+   "icon": "🧱",
+   "title": "OData & eAtlas code",
+   "tag": "Two backends, one DB",
+   "shot": null,
+   "hook": "Same database, two different stacks.",
+   "points": [
+    "**OData**: ASP.NET Web API 2 on IIS, .NET Framework 4.8.1, route `/odata` (v3, batch), contexts: `AlmanacContext`, `LicensingContext`, `MTPContext`.",
+    "**eAtlas**: ASP.NET Core 3.1, EF Core `AlmanacContext`, controllers + `Repository/`, SignalR hubs, React/Vite in `clientappvite/`."
+   ],
+   "viz": {
+    "type": "compare",
+    "lt": "OData Service 🔌",
+    "rt": "eAtlas 🌐",
+    "lc": "#3b82f6",
+    "rc": "#8b5cf6",
+    "rows": [
+     [
+      "Stack",
+      "Web API 2 on IIS, .NET FW 4.8.1",
+      "ASP.NET Core 3.1 + React/TS (Vite)"
+     ],
+     [
+      "ORM",
+      "EF6 AlmanacContext",
+      "EF Core AlmanacContext"
+     ],
+     [
+      "Entry",
+      "AlmanacODataService.csproj",
+      "eAtlas.csproj (SPA root clientappvite)"
+     ],
+     [
+      "Auth",
+      "AuthenticateUser → access token",
+      "Trimble Identity OAuth2"
+     ],
+     [
+      "Extra",
+      "MTPContext, licensing actions",
+      "Hubs: NotificationHub, AlertHub"
+     ]
+    ]
+   },
+   "terms": [],
+   "quiz": {
+    "q": "Which ORM does eAtlas use?",
+    "o": [
+     "EF6",
+     "EF Core",
+     "Dapper",
+     "Mongo driver"
+    ],
+    "a": 1,
+    "why": "eAtlas AlmanacContext uses EF Core; OData uses EF6."
+   },
+   "prompts": [
+    "Show me UserController.AssignServicecase",
+    "Where does OData call MTP?",
+    "Where is the SPA routing defined?"
+   ],
+   "try": "Open `AtlasWeb/eAtlas/clientappvite/src/common/routes.ts` and `Controllers/UserController`."
+  },
+  {
+   "id": "code-capstone",
+   "icon": "🏁",
+   "title": "Capstone: trace a repair",
+   "tag": "Evidence-based investigation",
+   "shot": null,
+   "hook": "Pick a question. Find proof in docs, then in code. Say clearly what is a fact vs a guess.",
+   "points": [
+    "Example: _'Technician cannot open a case after BCS alert'_ → docs: BCS Level 3 → code: BCS notification + case-open path.",
+    "Always separate **supported explanation**, **hypothesis**, **missing evidence**.",
+    "Tutor is read-only: never modify or run product code during learning."
+   ],
+   "viz": {
+    "type": "steps",
+    "items": [
+     {
+      "i": "❓",
+      "t": "Question",
+      "d": "A symptom or a 'how does this work'."
+     },
+     {
+      "i": "📚",
+      "t": "Docs first",
+      "d": "Read the project doc + Functionality doc."
+     },
+     {
+      "i": "🧬",
+      "t": "Code",
+      "d": "Locate classes named in the docs."
+     },
+     {
+      "i": "🧾",
+      "t": "Evidence",
+      "d": "Quote file + symbol."
+     },
+     {
+      "i": "🧠",
+      "t": "Conclude",
+      "d": "Fact vs hypothesis vs gap."
+     }
+    ]
+   },
+   "terms": [],
+   "quiz": {
+    "q": "Best way to answer 'why is the case blocked?'",
+    "o": [
+     "Guess",
+     "Docs → code → cite evidence, flag assumptions",
+     "Reset MongoDB",
+     "Switch environment"
+    ],
+    "a": 1,
+    "why": "Source-grounded answers; mark assumptions."
+   },
+   "prompts": [
+    "Trace a DWCR submit end to end with file names",
+    "Why might a case be blocked on open?",
+    "Quiz me on the whole map"
+   ],
+   "try": "Pick one of the starter prompts and look up each file mentioned."
+  }
+ ]
+}
