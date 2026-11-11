@@ -15,7 +15,7 @@ window.ATLAS = {
   "architecture": {
    "file": "assets/videos/architecting-atlas.mp4",
    "title": "Architecting Atlas: Connecting Trimble Hardware to the Cloud",
-   "note": "Local recording. It plays from this computer. It is not a Google Drive video."
+   "note": ""
   }
  },
  "phases": [
@@ -110,10 +110,6 @@ window.ATLAS = {
   {
    "id": "atlas-overview",
    "phase": "desktop",
-   "module": "orientation",
-   "topics": [
-    "atlas-overview"
-   ],
    "video": {
     "key": "atlas",
     "embed": true,
@@ -182,7 +178,6 @@ window.ATLAS = {
      "Who uses it"
     ]
    },
-   "prereq": [],
    "goals": [
     "Explain the purpose of ATLAS and who uses it",
     "Distinguish the Atlas product name from Almanac naming in code"
@@ -197,10 +192,6 @@ window.ATLAS = {
   {
    "id": "atlas-startup-navigation",
    "phase": "desktop",
-   "module": "desktop-essentials",
-   "topics": [
-    "atlas-startup-navigation"
-   ],
    "icon": "🚀",
    "title": "Install, startup & navigation",
    "tag": "What must exist before Atlas opens",
@@ -281,9 +272,6 @@ window.ATLAS = {
      "Who uses it"
     ]
    },
-   "prereq": [
-    "atlas-overview"
-   ],
    "goals": [
     "Identify installed components and startup dependencies",
     "Locate Product Details, My Service Cases, Dashboard, Settings, Help, and About"
@@ -298,10 +286,6 @@ window.ATLAS = {
   {
    "id": "atlas-access-and-licensing",
    "phase": "desktop",
-   "module": "desktop-essentials",
-   "topics": [
-    "atlas-access-and-licensing"
-   ],
    "icon": "🔐",
    "title": "Sign-in vs. license vs. authorization",
    "tag": "Why a login can still say 'no'",
@@ -366,9 +350,6 @@ window.ATLAS = {
      "External license types (what customers buy)"
     ]
    },
-   "prereq": [
-    "atlas-startup-navigation"
-   ],
    "goals": [
     "Distinguish authentication, application licensing, and product authorization",
     "Explain activation operations and full external versus collimator capabilities"
@@ -383,10 +364,6 @@ window.ATLAS = {
   {
    "id": "technician-workflow",
    "phase": "desktop",
-   "module": "desktop-repair",
-   "topics": [
-    "technician-workflow"
-   ],
    "video": {
     "key": "atlas",
     "embed": false,
@@ -464,9 +441,6 @@ window.ATLAS = {
      "What Atlas does in the product"
     ]
    },
-   "prereq": [
-    "atlas-access-and-licensing"
-   ],
    "goals": [
     "Describe the main stages of a technician visit",
     "Explain why repair activity is captured against a service case"
@@ -481,10 +455,6 @@ window.ATLAS = {
   {
    "id": "service-case-details",
    "phase": "desktop",
-   "module": "desktop-repair",
-   "topics": [
-    "service-case-details"
-   ],
    "icon": "🗂️",
    "title": "Inside a service case",
    "tag": "Accordion + task list + reports",
@@ -555,9 +525,6 @@ window.ATLAS = {
      "Reports at case completion"
     ]
    },
-   "prereq": [
-    "technician-workflow"
-   ],
    "goals": [
     "Distinguish product-level context from the open service-case workspace",
     "Explain how operations, parts, bulletins, and reports relate to the case"
@@ -572,10 +539,6 @@ window.ATLAS = {
   {
    "id": "service-content",
    "phase": "desktop",
-   "module": "desktop-repair",
-   "topics": [
-    "service-content"
-   ],
    "icon": "📚",
    "title": "Manuals, bulletins & downloads",
    "tag": "Reading vs recording",
@@ -626,9 +589,6 @@ window.ATLAS = {
      "Product Details and the service case page"
     ]
    },
-   "prereq": [
-    "service-case-details"
-   ],
    "goals": [
     "Locate desktop product manuals, bulletins, downloads, and instrument-constant operations",
     "Distinguish reading a bulletin from recording its application on a case"
@@ -643,10 +603,6 @@ window.ATLAS = {
   {
    "id": "device-plugins",
    "phase": "desktop",
-   "module": "desktop-repair",
-   "topics": [
-    "device-plugins"
-   ],
    "icon": "🔌",
    "title": "Detectors & service operations (plugins)",
    "tag": "How Atlas talks to instruments",
@@ -714,9 +670,6 @@ window.ATLAS = {
      "Contract (what plugins implement)"
     ]
    },
-   "prereq": [
-    "service-case-details"
-   ],
    "goals": [
     "Distinguish detectors from service operations",
     "Explain documented plugin delivery, mapping, execution, and results"
@@ -731,10 +684,6 @@ window.ATLAS = {
   {
    "id": "warranty-and-support",
    "phase": "desktop",
-   "module": "desktop-repair",
-   "topics": [
-    "warranty-and-support"
-   ],
    "icon": "💰",
    "title": "DWCR vs Service-Support",
    "tag": "Two buttons, two destinations",
@@ -848,9 +797,6 @@ window.ATLAS = {
      "Submit Service-Support (Salesforce / TWoD)"
     ]
    },
-   "prereq": [
-    "service-content"
-   ],
    "goals": [
     "Distinguish external warranty claims from internal repair-assistance requests",
     "Explain the documented claim gates and case-completion outcomes"
@@ -865,11 +811,6 @@ window.ATLAS = {
   {
    "id": "baseline-calibration",
    "phase": "desktop",
-   "module": "desktop-capabilities",
-   "topics": [
-    "baseline-calibration",
-    "bcs-notifications"
-   ],
    "icon": "🎯",
    "title": "Baseline Calibration (BCS)",
    "tag": "Calibration sites & notifications",
@@ -938,9 +879,6 @@ window.ATLAS = {
      "Calibration failsafe (Level 3 exception)"
     ]
    },
-   "prereq": [
-    "device-plugins"
-   ],
    "goals": [
     "Explain where BCS runs and who can launch it",
     "Describe the calibration-site workflow and its backend",
@@ -958,10 +896,6 @@ window.ATLAS = {
   {
    "id": "desktop-ai-assistant",
    "phase": "desktop",
-   "module": "desktop-capabilities",
-   "topics": [
-    "desktop-ai-assistant"
-   ],
    "icon": "🤖",
    "title": "Repair Assistant (Agentic AI)",
    "tag": "When the chat button appears",
@@ -1020,9 +954,6 @@ window.ATLAS = {
      "Agentic AI on Product Details"
     ]
    },
-   "prereq": [
-    "service-content"
-   ],
    "goals": [
     "Explain the documented conditions for showing the repair assistant",
     "Describe product and manual context without introducing ingestion implementation"
@@ -1037,10 +968,6 @@ window.ATLAS = {
   {
    "id": "offline-and-sync",
    "phase": "desktop",
-   "module": "desktop-capabilities",
-   "topics": [
-    "offline-and-sync"
-   ],
    "icon": "📶",
    "title": "Offline mode & Force Sync",
    "tag": "Why MongoDB lives on the PC",
@@ -1114,9 +1041,6 @@ window.ATLAS = {
      "How Atlas talks to it"
     ]
    },
-   "prereq": [
-    "service-case-details"
-   ],
    "goals": [
     "Explain local and server responsibilities during offline work",
     "Distinguish cached repair activity from actions that require network"
@@ -1131,10 +1055,6 @@ window.ATLAS = {
   {
    "id": "installation-and-recovery",
    "phase": "desktop",
-   "module": "desktop-capabilities",
-   "topics": [
-    "installation-and-recovery"
-   ],
    "icon": "🧯",
    "title": "Recovery & environments",
    "tag": "Reset vs Environment Switch",
@@ -1208,10 +1128,6 @@ window.ATLAS = {
      "What it does"
     ]
    },
-   "prereq": [
-    "offline-and-sync",
-    "atlas-access-and-licensing"
-   ],
    "goals": [
     "Identify installed Atlas components and documented startup dependencies",
     "Distinguish local database reset from internal environment switching and their risks"
@@ -1226,10 +1142,6 @@ window.ATLAS = {
   {
    "id": "eatlas-overview",
    "phase": "eatlas",
-   "module": "eatlas-essentials",
-   "topics": [
-    "eatlas-overview"
-   ],
    "video": {
     "key": "eatlas",
     "embed": true,
@@ -1307,12 +1219,6 @@ window.ATLAS = {
      "What Atlas does in the product"
     ]
    },
-   "prereq": [
-    "installation-and-recovery",
-    "baseline-calibration",
-    "desktop-ai-assistant",
-    "warranty-and-support"
-   ],
    "goals": [
     "Explain who uses eAtlas and how users sign in",
     "Contrast browser management/content work with desktop instrument repair"
@@ -1327,10 +1233,6 @@ window.ATLAS = {
   {
    "id": "eatlas-management",
    "phase": "eatlas",
-   "module": "eatlas-capabilities",
-   "topics": [
-    "eatlas-management"
-   ],
    "video": {
     "key": "eatlas",
     "embed": true,
@@ -1406,9 +1308,6 @@ window.ATLAS = {
      "What it serves"
     ]
    },
-   "prereq": [
-    "eatlas-overview"
-   ],
    "goals": [
     "Explain company-level case and license visibility",
     "Describe how manager assignment reaches the technician"
@@ -1423,10 +1322,6 @@ window.ATLAS = {
   {
    "id": "eatlas-content",
    "phase": "eatlas",
-   "module": "eatlas-capabilities",
-   "topics": [
-    "eatlas-content"
-   ],
    "video": {
     "key": "eatlas",
     "embed": true,
@@ -1504,10 +1399,6 @@ window.ATLAS = {
      "Secondary API for Atlas desktop"
     ]
    },
-   "prereq": [
-    "eatlas-management",
-    "service-content"
-   ],
    "goals": [
     "Locate web service content and company administration surfaces",
     "Distinguish web visibility from desktop activation and recorded case work"
@@ -1522,10 +1413,6 @@ window.ATLAS = {
   {
    "id": "atlas-eatlas-architecture",
    "phase": "connect",
-   "module": "connected-products",
-   "topics": [
-    "atlas-eatlas-architecture"
-   ],
    "video": {
     "key": "architecture",
     "embed": true,
@@ -1581,11 +1468,6 @@ window.ATLAS = {
      "How it connects to Atlas"
     ]
    },
-   "prereq": [
-    "eatlas-management",
-    "eatlas-content",
-    "offline-and-sync"
-   ],
    "goals": [
     "Distinguish desktop, primary backend, and web application responsibilities",
     "Explain the role of local MongoDB and the shared SQL catalog"
@@ -1600,12 +1482,6 @@ window.ATLAS = {
   {
    "id": "master-data-sync",
    "phase": "services",
-   "module": "supporting-services",
-   "topics": [
-    "master-data-sync",
-    "bulletin-email-notifications",
-    "ai-knowledge-sync"
-   ],
    "icon": "⏰",
    "title": "The daily schedule",
    "tag": "05:00 Salesforce → 06:00 AI",
@@ -1689,10 +1565,6 @@ window.ATLAS = {
      "High-level flow"
     ]
    },
-   "prereq": [
-    "atlas-eatlas-architecture",
-    "service-content"
-   ],
    "goals": [
     "Identify the upstream owner of catalog and organization data",
     "Trace incremental master-data distribution to Atlas clients",
@@ -1712,11 +1584,6 @@ window.ATLAS = {
   {
    "id": "ems-licensing",
    "phase": "services",
-   "module": "supporting-services",
-   "topics": [
-    "ems-licensing",
-    "instrument-service-licenses"
-   ],
    "icon": "🎫",
    "title": "Two kinds of license",
    "tag": "App seat vs instrument key",
@@ -1783,12 +1650,6 @@ window.ATLAS = {
      "Flow"
     ]
    },
-   "prereq": [
-    "atlas-eatlas-architecture",
-    "atlas-access-and-licensing",
-    "eatlas-content",
-    "device-plugins"
-   ],
    "goals": [
     "Trace purchased external seats from Oracle through EMS to Atlas activation",
     "Distinguish current external-seat provisioning from legacy and internal licensing",
@@ -1806,10 +1667,6 @@ window.ATLAS = {
   {
    "id": "instrument-constants-pipeline",
    "phase": "services",
-   "module": "supporting-services",
-   "topics": [
-    "instrument-constants-pipeline"
-   ],
    "icon": "📏",
    "title": "Instrument constants pipeline",
    "tag": "Watcher uploads, Comparer verifies",
@@ -1871,10 +1728,6 @@ window.ATLAS = {
      "What it does"
     ]
    },
-   "prereq": [
-    "master-data-sync",
-    "service-content"
-   ],
    "goals": [
     "Explain the separate watcher and comparer responsibilities",
     "Describe success and mismatch outcomes without confusing constants with catalog data"
@@ -1889,10 +1742,6 @@ window.ATLAS = {
   {
    "id": "global-service-boundaries",
    "phase": "services",
-   "module": "supporting-services",
-   "topics": [
-    "global-service-boundaries"
-   ],
    "icon": "🌍",
    "title": "Global Service & friends",
    "tag": "APIs for OTHER teams",
@@ -1953,10 +1802,6 @@ window.ATLAS = {
      "Flow"
     ]
    },
-   "prereq": [
-    "service-case-details",
-    "ems-licensing"
-   ],
    "goals": [
     "Distinguish Global Service from the desktop backend",
     "Explain its documented external-team use cases without generalizing access rules"
@@ -1971,10 +1816,6 @@ window.ATLAS = {
   {
    "id": "documentation-investigation",
    "phase": "services",
-   "module": "capstone",
-   "topics": [
-    "documentation-investigation"
-   ],
    "icon": "🧾",
    "title": "Capstone: investigate with evidence",
    "tag": "Docs first, then conclude",
@@ -2053,15 +1894,6 @@ window.ATLAS = {
      "Calibration failsafe (Level 3 exception)"
     ]
    },
-   "prereq": [
-    "warranty-and-support",
-    "baseline-calibration",
-    "instrument-constants-pipeline",
-    "master-data-sync",
-    "ems-licensing",
-    "installation-and-recovery",
-    "global-service-boundaries"
-   ],
    "goals": [
     "Connect the product journey to documented service and data boundaries",
     "Distinguish supported explanations from hypotheses and missing evidence"
@@ -2075,10 +1907,6 @@ window.ATLAS = {
   {
    "id": "code-map",
    "phase": "code",
-   "module": "source-code",
-   "topics": [
-    "code-map"
-   ],
    "icon": "🗺️",
    "title": "Repo treasure map",
    "tag": "Where is everything?",
@@ -2168,7 +1996,6 @@ window.ATLAS = {
      "Source map for later docs"
     ]
    },
-   "prereq": [],
    "goals": [
     "Choose the correct solution file and the current project folders",
     "Avoid legacy folders and find each project's documentation"
@@ -2183,10 +2010,6 @@ window.ATLAS = {
   {
    "id": "code-desktop",
    "phase": "code",
-   "module": "source-code",
-   "topics": [
-    "code-desktop"
-   ],
    "icon": "🖥️",
    "title": "Inside AlmanacApp/Almanac",
    "tag": "Modules, Services, Messages",
@@ -2278,9 +2101,6 @@ window.ATLAS = {
      "Runtime and integrations"
     ]
    },
-   "prereq": [
-    "code-map"
-   ],
    "goals": [
     "Trace how the desktop shell starts and builds its main views",
     "Locate the Product Details code used for service cases and DWCR"
@@ -2295,10 +2115,6 @@ window.ATLAS = {
   {
    "id": "code-messages",
    "phase": "code",
-   "module": "source-code",
-   "topics": [
-    "code-messages"
-   ],
    "icon": "📨",
    "title": "The Messages layer",
    "tag": "Cache or Server? Try it!",
@@ -2334,9 +2150,6 @@ window.ATLAS = {
      "Local MongoDB and Force Sync"
     ]
    },
-   "prereq": [
-    "code-desktop"
-   ],
    "goals": [
     "Explain what a message class is and how it chooses between cache and server",
     "Tell Messages apart from overlay dialogs and sync workers"
@@ -2351,10 +2164,6 @@ window.ATLAS = {
   {
    "id": "code-backends",
    "phase": "code",
-   "module": "source-code",
-   "topics": [
-    "code-backends"
-   ],
    "icon": "🧱",
    "title": "OData & eAtlas code",
    "tag": "Two backends, one DB",
@@ -2425,9 +2234,6 @@ window.ATLAS = {
      "Relation to Atlas and OData"
     ]
    },
-   "prereq": [
-    "code-desktop"
-   ],
    "goals": [
     "Compare the OData and eAtlas technology stacks",
     "Explain why both use the same shared SQL database"
@@ -2442,10 +2248,6 @@ window.ATLAS = {
   {
    "id": "code-capstone",
    "phase": "code",
-   "module": "source-code",
-   "topics": [
-    "code-capstone"
-   ],
    "icon": "🏁",
    "title": "Capstone: trace a repair",
    "tag": "Evidence-based investigation",
@@ -2516,10 +2318,6 @@ window.ATLAS = {
      "Atlas desktop behaviour"
     ]
    },
-   "prereq": [
-    "code-messages",
-    "code-backends"
-   ],
    "goals": [
     "Locate the code that implements a documented behaviour",
     "Report supported facts, hypotheses and missing evidence separately"
