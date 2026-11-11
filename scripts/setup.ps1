@@ -1,0 +1,111 @@
+<#
+ One-step setup for Atlas Onboarding.
+   setup.bat "C:\path\to\atlas_v2.0"            install or update
+   setup.bat "C:\path\to\atlas_v2.0" -Remove    uninstall (learner progress is kept)
+ Installs: ATLAS Tutor agent (VS Code Copilot), a Cursor rule + visual guide "Atlas Explorer".
+ Everything is added as untracked, git-excluded files inside the Atlas checkout.
+#>
+param(
+  [Parameter(Position = 0)][string]$Atlas,
+  [switch]$Remove,
+  [switch]$Shortcut
+)
+$ErrorActionPreference = 'Stop'
+$here = Split-Path -Parent $PSScriptRoot
+
+function Step($n, $t) { Write-Host ("`n[{0}] {1}" -f $n, $t) -ForegroundColor Cyan }
+function Fail($t) { Write-Host "ERROR: $t" -ForegroundColor Red; exit 1 }
+
+$ruleRel = '.cursor/rules/atlas-onboarding.mdc'
+$marker = 'atlas-onboarding-managed'
+function Get-Exclude($atlas) { (& git -C $atlas rev-parse --path-format=absolute --git-path info/exclude).Trim() }
+function Remove-CursorRule {
+  $rule = Join-Path $Atlas $ruleRel
+  if ((Test-Path $rule) -and (Select-String -Path $rule -Pattern $marker -Quiet)) { Remove-Item $rule -Force }
+  $ex = Get-Exclude $Atlas
+  if (Test-Path $ex) {
+    $t = [IO.File]::ReadAllText($ex)
+    $t = [regex]::Replace($t, '(?s)\r?\n?# BEGIN atlas-onboarding cursor rule.*?# END atlas-onboarding cursor rule\r?\n?', '')
+    [IO.File]::WriteAllText($ex, $t)
+  }
+}
+
+Step 1 'Checking tools'
+$py = (Get-Command python -ErrorAction SilentlyContinue)
+if (-not $py) { Fail 'Python 3.10+ not found. Install it from python.org and re-run.' }
+$ver = & python -c "import sys;print('%d.%d'%sys.version_info[:2])"
+if ([version]$ver -lt [version]'3.10') { Fail "Python $ver found, need 3.10 or newer." }
+if (-not (Get-Command git -ErrorAction SilentlyContinue)) { Fail 'Git not found. Install Git for Windows and re-run.' }
+Write-Host "Python $ver and Git OK"
+
+Step 2 'Locating the Atlas checkout'
+if (-not $Atlas) {
+  $guess = @("$env:USERPROFILE\Documents\atlas_v2.0", "$env:USERPROFILE\source\repos\atlas_v2.0", "C:\atlas_v2.0") | Where-Object { Test-Path "$_\Atlas.sln" } | Select-Object -First 1
+  if ($guess) { $Atlas = $guess; Write-Host "Found: $Atlas" }
+  else { $Atlas = Read-Host 'Path to your Atlas checkout (folder that contains Atlas.sln)' }
+}
+$Atlas = $Atlas.Trim('"').TrimEnd('\')
+if (-not (Test-Path "$Atlas\Atlas.sln")) { Fail "No Atlas.sln in '$Atlas'. Give the repository root." }
+$dest = Join-Path $Atlas '.atlas-onboarding'
+$explorerDest = Join-Path $dest 'explorer'
+$manifest = Join-Path $dest 'manifest.json'
+
+# Stop a previously started Atlas Explorer server so the new files and server code are used.
+Get-CimInstance Win32_Process -Filter "Name like 'python%'" -ErrorAction SilentlyContinue |
+  Where-Object { $_.CommandLine -match 'server\.py' -and $_.CommandLine -match [regex]::Escape('.atlas-onboarding') } |
+  ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
+if ($Remove) {
+  Step 3 'Removing the tutor'
+  if (Test-Path $manifest) { & python "$here\scripts\install.py" remove --atlas $Atlas; if ($LASTEXITCODE) { Fail 'Installer refused removal (see message above).' } }
+  if (Test-Path $explorerDest) { Remove-Item $explorerDest -Recurse -Force }
+  Remove-Item (Join-Path $dest 'Open Atlas Explorer.bat') -Force -ErrorAction SilentlyContinue
+  Remove-CursorRule
+  Write-Host 'Removed. Your learner progress was not touched.' -ForegroundColor Green
+  exit 0
+}
+
+Step 3 'Installing the ATLAS Tutor agent'
+$action = if (Test-Path $manifest) { 'update' } else { 'install' }
+& python "$here\scripts\install.py" $action --atlas $Atlas
+if ($LASTEXITCODE) { Fail 'The installer stopped. Read the message above; nothing was left half-installed.' }
+
+Step 4 'Installing the visual guide (Atlas Explorer)'
+$keep = Join-Path $env:TEMP ('atlas-shots-' + [guid]::NewGuid())
+$shots = Join-Path $explorerDest 'assets\screens'
+if (Test-Path $shots) { Copy-Item $shots $keep -Recurse -Force }   # keep screenshots added only on the Atlas side
+if (Test-Path $explorerDest) { Remove-Item $explorerDest -Recurse -Force }
+New-Item -ItemType Directory -Force $explorerDest | Out-Null
+$src = Join-Path $here 'explorer'
+Copy-Item "$src\*" $explorerDest -Recurse -Force
+if (Test-Path $keep) { Copy-Item "$keep\*" $shots -Recurse -Force; Remove-Item $keep -Recurse -Force }
+$bat = Join-Path $dest 'Open Atlas Explorer.bat'
+"@echo off`r`ntitle Atlas Explorer (close this window to stop)`r`ncd /d `"%~dp0explorer`"`r`necho Atlas Explorer: http://localhost:8765  (local only, read-only). Close this window to stop.`r`npython server.py --open --atlas `"%~dp0..`"`r`nif errorlevel 1 pause" | Set-Content -Encoding ASCII $bat
+
+if ($Shortcut) {
+  $desk = [Environment]::GetFolderPath('Desktop')
+  $uri = ([Uri](Join-Path $explorerDest 'index.html')).AbsoluteUri
+  "[InternetShortcut]`r`nURL=$uri" | Set-Content -Encoding ASCII (Join-Path $desk 'Atlas Explorer.url')
+  Write-Host 'Desktop shortcut created.'
+}
+
+Step 5 'Installing the Cursor rule'
+$rule = Join-Path $Atlas $ruleRel
+$tracked = & git -C $Atlas ls-files -- '.cursor/rules/atlas-onboarding.mdc'
+if ($tracked) { Write-Host 'Cursor rule is tracked in git; left untouched.' -ForegroundColor Yellow }
+elseif ((Test-Path $rule) -and -not (Select-String -Path $rule -Pattern $marker -Quiet)) { Write-Host 'A different .cursor rule with this name exists; left untouched.' -ForegroundColor Yellow }
+else {
+  New-Item -ItemType Directory -Force (Split-Path $rule) | Out-Null
+  Copy-Item (Join-Path $here 'cursor\atlas-onboarding.mdc') $rule -Force
+  $ex = Get-Exclude $Atlas
+  $t = if (Test-Path $ex) { [IO.File]::ReadAllText($ex) } else { '' }
+  if ($t -notmatch 'BEGIN atlas-onboarding cursor rule') {
+    [IO.File]::AppendAllText($ex, "`n# BEGIN atlas-onboarding cursor rule`n/.cursor/rules/atlas-onboarding.mdc`n# END atlas-onboarding cursor rule`n")
+  }
+  Write-Host 'Cursor rule installed (git-excluded).'
+}
+
+Step 6 'Done'
+Write-Host "Agent  : open '$Atlas' in VS Code, Copilot Chat -> pick 'ATLAS Tutor' -> say: Hi (or ask a question)" -ForegroundColor Green
+Write-Host "Cursor : open the folder in Cursor, in chat type: @atlas-onboarding  Hi (or ask a question)" -ForegroundColor Green
+Write-Host "Visual : double-click '$bat'" -ForegroundColor Green
+Start-Process $bat

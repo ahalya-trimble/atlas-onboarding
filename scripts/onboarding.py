@@ -170,7 +170,7 @@ class Store:
             return {"saved": False, "consent": False, "revision": None,
                     "topics": [], "attempts": [], "dueReviews": [],
                     "freshnessUncertain": [], "nextTopic": next(iter(self.lessons)),
-                    "lastSession": None,
+                    "lastSession": None, "sessions": [],
                     "message": "Progress storage is not initialized. Show the automatic-saving notice, then run init."}
         with closing(self.connect()) as connection:
             # Keep all reads on one snapshot while another tutor may save.
@@ -195,6 +195,8 @@ class Store:
                                        if value["curriculum_hash"] != self.signature(key)],
                 "nextTopic": next_lesson["id"] if next_lesson else None,
                 "lastSession": json.loads(session[0]) if session else None,
+                "sessions": [json.loads(row[0]) for row in connection.execute(
+                    "SELECT payload FROM sessions ORDER BY rowid")],
             }
 
     def write(self, action, payload):

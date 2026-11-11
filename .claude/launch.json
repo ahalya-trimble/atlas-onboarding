@@ -1,0 +1,6 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    { "name": "explorer", "runtimeExecutable": "python", "runtimeArgs": ["explorer/server.py", "--atlas", "C:/Users/ahalyar/Documents/atlas_v2.0"], "port": 8765 }
+  ]
+}
