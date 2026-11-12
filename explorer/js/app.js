@@ -47,8 +47,9 @@
         return `<div class="ph" style="--c:${p.color}"><div class="phh"><b>${p.n}. ${p.name}</b><em>${pct(p.id)}%</em></div>` +
           lessonsOf(p.id).map(l => `<a class="nav ${cur === l.id ? "on" : ""} ${isRec(l.id) ? "rec" : ""}" href="#/lesson/${l.id}"><span class="dot ${S.done[l.id] ? "ok" : lock ? "lk" : ""}"></span>${esc(l.title)}</a>`).join("") + `</div>`;
       }).join("") +
-      `<div class="ph"><a class="nav ${h === "glossary" ? "on" : ""}" href="#/glossary">Glossary</a><a class="nav ${h === "summary" ? "on" : ""}" href="#/summary">Save-state summary</a><a class="nav" href="#" data-profile>Edit my profile</a></div>`;
+      `<div class="ph"><a class="nav ${h === "glossary" ? "on" : ""}" href="#/glossary">Glossary</a><a class="nav ${h === "summary" ? "on" : ""}" href="#/summary">Save-state summary</a><a class="nav" href="#" data-profile>Edit my profile</a><a class="nav" href="#" data-tour>Take the guided tour</a></div>`;
     $("#side [data-profile]").onclick = e => { e.preventDefault(); profileModal(); };
+    const tb = $("#side [data-tour]"); if (tb) tb.onclick = e => { e.preventDefault(); tour(true); };
   }
 
   /* ---------- hero animation + flowchart + diagrams ---------- */
@@ -184,7 +185,7 @@
         return `<article class="isle" style="--c:${p.color}"><div class="ring" style="--p:${pct(p.id)}"><span>${p.n}</span></div>
         <h3>${p.name}</h3><p>${p.sub}</p><small>${ls.filter(l => S.done[l.id]).length} of ${ls.length} lessons complete</small>
         <div class="chips">${ls.map(l => `<a class="chip ${S.done[l.id] ? "ok" : ""} ${isRec(l.id) ? "rec" : ""}" href="#/lesson/${l.id}" title="${esc(l.tag)}">${esc(l.title)}</a>`).join("")}</div>
-        ${lock ? `<div class="lock">Locked until islands 1 to 4 are done. <a href="#" data-unlock>Skip ahead</a></div>` : ""}</article>`;
+        ${lock ? `<div class="lock">Locked until sections 1 to 4 are done. <a href="#" data-unlock>Skip ahead</a></div>` : ""}</article>`;
       }).join("") + `</div>
       <h2 class="sec">How this works</h2><div class="cards3">
       <div class="card"><b>One idea at a time</b><span>Each lesson has a picture, key points, a mini-quiz and the source doc.</span></div>
@@ -196,9 +197,9 @@
   function lessonView(l) {
     const p = phaseOf(l.phase), locked = p.code && !codeUnlocked();
     const idx = D.lessons.indexOf(l), prev = D.lessons[idx - 1], next = D.lessons[idx + 1], num = p.n + "." + (lessonsOf(p.id).indexOf(l) + 1);
-    if (locked) return `<div class="lessonhead" style="--c:${p.color}"><h1>${esc(l.title)}</h1><p>The Source Code island unlocks after islands 1 to 4. That way you know the story before reading the code.</p><a class="btn" href="#" data-unlock>Skip ahead</a> <a class="btn ghost" href="#/home">Back to overview</a></div>`;
+    if (locked) return `<div class="lessonhead" style="--c:${p.color}"><h1>${esc(l.title)}</h1><p>The Source Code section unlocks after sections 1 to 4, so you understand how Atlas works before reading the code.</p><a class="btn" href="#" data-unlock>Skip ahead</a> <a class="btn ghost" href="#/home">Back to overview</a></div>`;
     const q = l.quiz;
-    return `<div class="lessonhead" style="--c:${p.color}"><div class="crumb">${p.n}. ${p.name}${isRec(l.id) ? " &middot; recommended for you" : ""}</div><h1><span class="ib">${num}</span>${esc(l.title)}</h1><div class="tag">${esc(l.tag)}</div></div>
+    return `<div class="lessonhead" style="--c:${p.color}"><div class="crumb">${p.n}. ${p.name}${isRec(l.id) ? ` &middot; recommended for you` : ""}</div><h1><span class="ib">${num}</span>${esc(l.title)}</h1><div class="tag">${esc(l.tag)}</div></div>
       <div class="hookbox" style="--c:${p.color}"><b>In short:</b> ${md(l.hook)}</div>
       ${l.goals && l.goals.length ? `<div class="goals"><b>After this lesson you can</b><ul>${l.goals.map(g => `<li>${esc(g)}</li>`).join("")}</ul></div>` : ""}
       <div class="viz" style="--c:${p.color}">${viz(l.viz)}</div>
@@ -252,6 +253,39 @@
       <div class="row"><button class="btn" data-copy-sum>Copy</button><button class="btn ghost" data-dl>Download .md</button><button class="btn ghost danger" data-reset>Reset progress</button></div>`;
   }
 
+  /* ---------- first-use guided tour ---------- */
+  const TOUR = [
+    ["#side", "Lessons menu", "Lessons are grouped into five sections, in the order we suggest you learn them. A dot turns green when you complete a lesson."],
+    ["#side .nav.rec", "Blue bar on the left", "A lesson with a blue bar is suggested for your role. Other lessons are not hidden; you can open any lesson at any time. Change your role under Edit my profile."],
+    ["#xp", "Your progress", "This shows your level and how many lessons you have completed. It is saved on this computer."],
+    [".hero .btn.big", "Start or continue", "Opens the next lesson on your path, so you never have to choose where to go next."],
+    [".map", "Learning path", "The same sections as cards. A dashed outline marks lessons suggested for your role, and a coloured fill marks completed ones."],
+    [".askfab", "Ask the tutor", "Search the guide and the Atlas documents here. For answers from the live code, use the ATLAS Tutor agent in your IDE."]];
+  function tour(manual) {
+    if (!manual) { try { if (localStorage.getItem("atlas-tour") === "1") return; } catch (e) { } }
+    try { localStorage.setItem("atlas-tour", "1"); } catch (e) { }
+    if (location.hash && location.hash !== "#/home" && location.hash !== "#/") location.hash = "#/home";
+    let i = 0; const o = document.createElement("div"); o.className = "tour";
+    o.innerHTML = `<div class="tspot"></div><div class="tpop" role="dialog" aria-live="polite"><small data-tn></small><h3 data-tt></h3><p data-tb></p><div class="row"><button class="btn ghost" data-tskip>Skip tour</button><button class="btn ghost" data-tprev>Back</button><button class="btn" data-tnext>Next</button></div></div>`;
+    document.body.appendChild(o);
+    const spot = $(".tspot", o), pop = $(".tpop", o), end = () => { o.remove(); window.removeEventListener("resize", show); };
+    function show() {
+      const [sel, title, body] = TOUR[i], el = $(sel);
+      $("[data-tn]", o).textContent = `Step ${i + 1} of ${TOUR.length}`; $("[data-tt]", o).textContent = title; $("[data-tb]", o).textContent = body;
+      $("[data-tprev]", o).hidden = i === 0; $("[data-tnext]", o).textContent = i === TOUR.length - 1 ? "Done" : "Next";
+      if (!el) { spot.style.cssText = "display:none"; pop.style.cssText = "left:50%;top:50%;transform:translate(-50%,-50%)"; return; }
+      el.scrollIntoView({ block: "nearest" }); const r = el.getBoundingClientRect();
+      spot.style.cssText = `left:${r.left - 6}px;top:${r.top - 6}px;width:${r.width + 12}px;height:${r.height + 12}px`;
+      const pw = Math.min(340, innerWidth - 24); let x = r.right + 16, y = r.top;
+      if (x + pw > innerWidth - 12) { x = Math.max(12, Math.min(r.left, innerWidth - pw - 12)); y = r.bottom + 16; }
+      if (y + 200 > innerHeight) y = Math.max(12, innerHeight - 220);
+      pop.style.cssText = `left:${x}px;top:${y}px;width:${pw}px`;
+    }
+    $("[data-tnext]", o).onclick = () => { if (i === TOUR.length - 1) end(); else { i++; show(); } };
+    $("[data-tprev]", o).onclick = () => { i--; show(); };
+    $("[data-tskip]", o).onclick = end; window.addEventListener("resize", show); show();
+  }
+
   /* ---------- profile modal ---------- */
   function profileModal(first) {
     const p = S.profile || { name: "", role: "technician", exp: "new to Atlas", goal: "" };
@@ -263,8 +297,8 @@
       <label>What do you want to achieve? (optional)<input data-g value="${esc(p.goal)}" placeholder="e.g. fix eAtlas assignment bugs"/></label>
       <div class="row"><button class="btn" data-ok>Save</button><button class="btn ghost" data-skip>${first ? "Skip for now" : "Cancel"}</button></div></div>`;
     document.body.appendChild(m);
-    $("[data-ok]", m).onclick = () => { S.profile = { name: $("[data-n]", m).value.trim() || "Explorer", role: $("[data-r]", m).value, exp: $("[data-e]", m).value, goal: $("[data-g]", m).value.trim() }; save(); m.remove(); route(); };
-    $("[data-skip]", m).onclick = () => { if (first) { S.skipProfile = true; save(); } m.remove(); };
+    $("[data-ok]", m).onclick = () => { S.profile = { name: $("[data-n]", m).value.trim() || "Explorer", role: $("[data-r]", m).value, exp: $("[data-e]", m).value, goal: $("[data-g]", m).value.trim() }; save(); m.remove(); route(); if (first) tour(); };
+    $("[data-skip]", m).onclick = () => { if (first) { S.skipProfile = true; save(); } m.remove(); if (first) tour(); };
   }
 
   /* ---------- offline ask helper ---------- */

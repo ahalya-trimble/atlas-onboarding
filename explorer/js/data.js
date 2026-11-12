@@ -24,7 +24,7 @@ window.ATLAS = {
    "n": 1,
    "icon": "🖥️",
    "color": "#3b82f6",
-   "name": "Atlas Desktop Island",
+   "name": "Atlas Desktop",
    "sub": "What technicians use to repair instruments",
    "code": false
   },
@@ -33,7 +33,7 @@ window.ATLAS = {
    "n": 2,
    "icon": "🌐",
    "color": "#8b5cf6",
-   "name": "eAtlas Web Bay",
+   "name": "eAtlas Web",
    "sub": "What service managers use in the browser",
    "code": false
   },
@@ -42,8 +42,8 @@ window.ATLAS = {
    "n": 3,
    "icon": "🔗",
    "color": "#d4893a",
-   "name": "The Big Picture Bridge",
-   "sub": "How the pieces talk to each other",
+   "name": "How Atlas Connects",
+   "sub": "How the desktop app, eAtlas and the servers exchange data",
    "code": false
   },
   {
@@ -51,8 +51,8 @@ window.ATLAS = {
    "n": 4,
    "icon": "🛰️",
    "color": "#2a9d8f",
-   "name": "Satellite Services Reef",
-   "sub": "Background jobs that keep data fresh",
+   "name": "Background Services",
+   "sub": "Scheduled jobs and watchers that keep data up to date",
    "code": false
   },
   {
@@ -60,8 +60,8 @@ window.ATLAS = {
    "n": 5,
    "icon": "🧬",
    "color": "#6366a8",
-   "name": "Source Code Caves",
-   "sub": "Now we open the code (concepts first, done!)",
+   "name": "Source Code",
+   "sub": "The Visual Studio solution, once you know the concepts",
    "code": true
   }
  ],
@@ -119,7 +119,7 @@ window.ATLAS = {
    },
    "icon": "🧭",
    "title": "What is ATLAS?",
-   "tag": "The 60-second story",
+   "tag": "Atlas in one minute",
    "shot": "atlas-overview",
    "hook": "Imagine a pit-crew toolbox for surveying instruments. Atlas tells a technician what to fix, runs the tests, records the work and files the warranty claim.",
    "points": [
@@ -372,7 +372,7 @@ window.ATLAS = {
     ]
    },
    "icon": "🛠️",
-   "title": "The technician's journey",
+   "title": "The technician workflow, step by step",
    "tag": "Serial number → completed case",
    "shot": "product-details",
    "hook": "Follow one repair from the moment the instrument hits the bench. Click each stop.",
@@ -1421,8 +1421,8 @@ window.ATLAS = {
     ]
    },
    "icon": "🗺️",
-   "title": "The whole map",
-   "tag": "Click any node!",
+   "title": "All components together",
+   "tag": "Click any component for details",
    "shot": "architecture",
    "hook": "One shared SQL database; two backends; one local MongoDB per PC.",
    "points": [
@@ -1810,7 +1810,7 @@ window.ATLAS = {
     "Why does Atlas Global Service exist alongside OData and eAtlas?",
     "What can other teams get from Global Service?",
     "How do the supporting jobs relate?",
-    "Give me a one-page map of all the satellites"
+    "Give me a one-page summary of all the background services"
    ]
   },
   {
@@ -1901,14 +1901,14 @@ window.ATLAS = {
    "prompts": [
     "How would you explain a repair end to end and investigate a blocked step using documentation and read-only source code?",
     "Trace a DWCR submit end to end using only the documents",
-    "Quiz me on the whole map"
+    "Quiz me on the topics we discussed"
    ]
   },
   {
    "id": "code-map",
    "phase": "code",
    "icon": "🗺️",
-   "title": "Repo treasure map",
+   "title": "Repository folder guide",
    "tag": "Where is everything?",
    "shot": null,
    "hook": "Open `Atlas.sln` in Visual Studio. Prefer the current trees; avoid legacy folders.",
@@ -2326,7 +2326,7 @@ window.ATLAS = {
     "Trace one documented behaviour from the document to the code that implements it.",
     "Trace a DWCR submit end to end with file names",
     "Why might a case be blocked on open?",
-    "Quiz me on the whole map"
+    "Quiz me on the topics we discussed"
    ]
   }
  ]
