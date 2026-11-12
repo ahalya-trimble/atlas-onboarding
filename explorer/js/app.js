@@ -8,12 +8,16 @@
   const lessonsOf = pid => D.lessons.filter(l => l.phase === pid);
   const byId = id => D.lessons.find(l => l.id === ((D.legacyIds || {})[id] || id));
 
-  let S = { done: {}, quiz: {}, xp: 0, unlock: false, profile: null };
-  try { S = Object.assign(S, JSON.parse(localStorage.getItem(KEY) || "{}")); } catch (e) {}
+  let checkout = "";
+  const emptyState = () => ({ done: {}, quiz: {}, xp: 0, unlock: false, profile: null, updatedAt: 0 });
+  const storageKey = () => checkout ? KEY + ":" + checkout : KEY;
+  const readState = key => { try { return Object.assign(emptyState(), JSON.parse(localStorage.getItem(key) || "null") || {}); } catch (e) { return emptyState(); } };
+  let S = readState(KEY);
   const migrate = () => { const m = D.legacyIds || {}; ["done", "quiz"].forEach(k => { const o = S[k] || {}; Object.keys(m).forEach(old => { if (old in o) { o[m[old]] = o[old]; delete o[old]; } }); }); };
   migrate();
-  
-  const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} pushProgress(); };
+  const localWork = () => !!(S.profile || S.skipProfile || S.xp || Object.keys(S.done || {}).length || Object.keys(S.quiz || {}).length);
+
+  const save = () => { S.updatedAt = Math.max(Date.now(), (S.updatedAt || 0) + 1); if (checkout) S.checkout = checkout; try { localStorage.setItem(storageKey(), JSON.stringify(S)); } catch (e) {} pushProgress(); };
 
   /* ---------- personalization ---------- */
   const ROLES = {
@@ -118,7 +122,7 @@
     const W = 170, H = 56;
     return `<svg class="arch fc" viewBox="0 0 860 470" role="img" aria-label="Atlas architecture"><defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
       ${EDGES.map(e => `<g><polyline points="${e[3].map(p => p.join(",")).join(" ")}" class="edge ${e[4] ? "flow" : ""}" marker-end="url(#ah)"/><text x="${e[3][Math.floor(e[3].length / 2)][0] + 6}" y="${e[3][Math.floor(e[3].length / 2)][1] - 4}" class="elab">${e[2]}</text></g>`).join("")}
-      ${Object.entries(NODES).map(([k, n]) => `<g class="node" data-node="${k}" tabindex="0" style="--c:${n[3]}"><rect x="${n[0]}" y="${n[1]}" width="${W}" height="${H}" rx="12"/><text x="${n[0] + W / 2}" y="${n[1] + 33}" text-anchor="middle">${esc(n[2])}</text></g>`).join("")}</svg>
+      ${Object.entries(NODES).map(([k, n]) => `<g class="node" data-node="${k}" tabindex="0" role="button" aria-label="${esc(n[2])}" style="--c:${n[3]}"><rect x="${n[0]}" y="${n[1]}" width="${W}" height="${H}" rx="12"/><text x="${n[0] + W / 2}" y="${n[1] + 33}" text-anchor="middle">${esc(n[2])}</text></g>`).join("")}</svg>
       <div class="stepinfo" data-archinfo>Select any box to see what it does. Animated lines show the main data flow.</div>`;
   }
   function dsDemo() {
@@ -255,16 +259,33 @@
   /* ---------- profile modal ---------- */
   function profileModal(first) {
     const p = S.profile || { name: "", role: "technician", exp: "new to Atlas", goal: "" };
+    const where = LIVE
+      ? "Saved in this browser and in .atlas-onboarding/state/explorer-progress.json on this computer. It sets your recommended path and is copied into prompts you send to the tutor."
+      : "Stored only in this browser until you start the guide with Open Atlas Explorer.bat. It sets your recommended path and is copied into prompts you send to the tutor.";
+    const prev = document.activeElement;
     const m = document.createElement("div"); m.className = "modal";
-    m.innerHTML = `<div class="dlg"><h2>${first ? "Welcome. Let's personalize your guide" : "Your profile"}</h2><p class="mut">Stored only in this browser. It sets your recommended path and adds context to the prompts you copy.</p>
+    m.innerHTML = `<div class="dlg" role="dialog" aria-modal="true" aria-labelledby="profile-title"><h2 id="profile-title">${first ? "Welcome. Let's personalize your guide" : "Your profile"}</h2><p class="mut">${esc(where)}</p>
       <label>First name<input data-n value="${esc(p.name)}" placeholder="e.g. Ahalya"/></label>
       <label>Your role<select data-r>${Object.entries(ROLES).map(([k, v]) => `<option value="${k}" ${p.role === k ? "selected" : ""}>${v.label}</option>`).join("")}</select></label>
       <label>Experience with Atlas<select data-e>${["new to Atlas", "some experience", "experienced"].map(x => `<option ${p.exp === x ? "selected" : ""}>${x}</option>`).join("")}</select></label>
       <label>What do you want to achieve? (optional)<input data-g value="${esc(p.goal)}" placeholder="e.g. fix eAtlas assignment bugs"/></label>
       <div class="row"><button class="btn" data-ok>Save</button><button class="btn ghost" data-skip>${first ? "Skip for now" : "Cancel"}</button></div></div>`;
     document.body.appendChild(m);
-    $("[data-ok]", m).onclick = () => { S.profile = { name: $("[data-n]", m).value.trim() || "Explorer", role: $("[data-r]", m).value, exp: $("[data-e]", m).value, goal: $("[data-g]", m).value.trim() }; save(); m.remove(); route(); };
-    $("[data-skip]", m).onclick = () => { if (first) { S.skipProfile = true; save(); } m.remove(); };
+    const dlg = $(".dlg", m);
+    const focusables = () => [...dlg.querySelectorAll("input, select, button")];
+    const close = () => { document.removeEventListener("keydown", trap); m.remove(); if (prev && prev.focus) prev.focus(); };
+    function trap(e) {
+      if (e.key === "Escape") { e.preventDefault(); $("[data-skip]", m).click(); return; }
+      if (e.key !== "Tab") return;
+      const items = focusables(); if (!items.length) return;
+      const firstEl = items[0], lastEl = items[items.length - 1];
+      if (e.shiftKey && document.activeElement === firstEl) { e.preventDefault(); lastEl.focus(); }
+      else if (!e.shiftKey && document.activeElement === lastEl) { e.preventDefault(); firstEl.focus(); }
+    }
+    document.addEventListener("keydown", trap);
+    $("[data-ok]", m).onclick = () => { S.profile = { name: $("[data-n]", m).value.trim() || "Explorer", role: $("[data-r]", m).value, exp: $("[data-e]", m).value, goal: $("[data-g]", m).value.trim() }; save(); close(); route(); };
+    $("[data-skip]", m).onclick = () => { if (first) { S.skipProfile = true; save(); } close(); };
+    focusables()[0].focus();
   }
 
   /* ---------- offline ask helper ---------- */
@@ -300,23 +321,46 @@
   /* ---------- live source docs (local, read-only, nothing is stored in the browser) ---------- */
   let LIVE = false;
   const api = (path, opt) => fetch(path, Object.assign({ headers: { "X-Requested-With": "atlas-explorer" }, cache: "no-store" }, opt)).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); });
-  const hasApi = () => api("/api/health").then(() => { LIVE = true; }, () => { LIVE = false; });
+  const hasApi = () => api("/api/health").then(h => {
+    LIVE = true;
+    if (!h || !h.atlas) return;
+    checkout = h.atlas;
+    if (localStorage.getItem(storageKey())) { S = readState(storageKey()); migrate(); return; }
+    const legacy = readState(KEY);
+    const claimed = legacy.checkout && legacy.checkout !== checkout;
+    const legacyWork = legacy.profile || legacy.skipProfile || legacy.xp || Object.keys(legacy.done || {}).length;
+    if (!claimed && !legacy.checkout && legacyWork) {
+      legacy.checkout = checkout;
+      S = legacy;
+      try { localStorage.setItem(KEY, JSON.stringify(legacy)); localStorage.setItem(storageKey(), JSON.stringify(legacy)); } catch (e) {}
+    } else S = emptyState();
+    migrate();
+  }, () => { LIVE = false; });
   const q2 = p => encodeURIComponent(p);
 
   const chipsFor = (heads, want) => { const w = (want || []).map(x => x.toLowerCase()); const m = heads.filter(h => w.includes(h.text.toLowerCase())); return m.length ? m : heads.slice(0, 6); };
 
   /* progress is kept in one local file on this computer (and in the browser as a backup) */
-  let pushT = null;
+  let pushT = null, syncWarned = false;
+  function applyState(next) {
+    S = Object.assign(emptyState(), next); migrate();
+    try { localStorage.setItem(storageKey(), JSON.stringify(S)); } catch (e) {}
+  }
   function pushProgress() {
     if (!LIVE) return; clearTimeout(pushT);
-    pushT = setTimeout(() => api("/api/progress", { method: "POST", headers: { "X-Requested-With": "atlas-explorer", "Content-Type": "application/json" }, body: JSON.stringify(S) }).catch(() => { }), 400);
+    pushT = setTimeout(() => fetch("/api/progress", { method: "POST", headers: { "X-Requested-With": "atlas-explorer", "Content-Type": "application/json" }, body: JSON.stringify(S), cache: "no-store" }).then(r => {
+      if (r.status === 409) return r.json().then(body => { if (body.explorer) applyState(body.explorer); });
+      if (!r.ok) throw new Error(r.status);
+      syncWarned = false;
+    }).catch(() => { if (!syncWarned) { syncWarned = true; toast("Progress stayed in this browser. It was not saved to the file on this computer."); } }), 400);
   }
   function loadProgress() {
     if (!LIVE) return Promise.resolve();
     return api("/api/progress").then(r => {
-      if (r.explorer) { S = Object.assign({ done: {}, quiz: {}, xp: 0, unlock: false, profile: null }, r.explorer); migrate(); try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { } }
-      else if (S.profile || Object.keys(S.done).length || S.xp) pushProgress();
-    }).catch(() => { });
+      const disk = r.explorer, diskT = disk ? (+disk.updatedAt || 0) : 0, localT = +S.updatedAt || 0;
+      if (disk && (diskT > localT || (!localWork() && !localT))) applyState(disk);
+      else if (localWork() || localT > diskT) pushProgress();
+    }).catch(() => toast("Could not read progress saved on this computer."));
   }
 
   function loadLive(el) {
@@ -432,7 +476,7 @@
       pb.onclick = () => { clearInterval(tm); let i = 0; show(0); pb.textContent = "Playing..."; tm = setInterval(() => { i++; if (i >= bs.length) { clearInterval(tm); pb.textContent = "Replay"; return; } show(i); }, 1700); };
     });
     root.querySelectorAll("[data-mock]").forEach(b => b.onclick = () => { root.querySelectorAll("[data-mock]").forEach(x => x.classList.remove("on")); b.classList.add("on"); const d = MOCK[b.dataset.mock]; $("[data-mockmain]", root).innerHTML = `<h4>${d[0]}</h4><p>${d[1]}</p>`; });
-    root.querySelectorAll("[data-node]").forEach(g => { const f = () => { root.querySelectorAll("[data-node]").forEach(x => x.classList.remove("on")); g.classList.add("on"); const n = NODES[g.dataset.node]; $("[data-archinfo]", root).innerHTML = `<b>${esc(n[2])}</b> &mdash; ${md(n[4])}`; }; g.onclick = f; g.onkeydown = e => { if (e.key === "Enter") f(); }; });
+    root.querySelectorAll("[data-node]").forEach(g => { const f = () => { root.querySelectorAll("[data-node]").forEach(x => x.classList.remove("on")); g.classList.add("on"); const n = NODES[g.dataset.node]; $("[data-archinfo]", root).innerHTML = `<b>${esc(n[2])}</b> &mdash; ${md(n[4])}`; }; g.onclick = f; g.onkeydown = e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); f(); } }; });
     const ds = $(".ds", root); if (ds) { ds.querySelectorAll("select").forEach(s => s.onchange = () => dsCalc(ds)); dsCalc(ds); }
     const qz = $("[data-quiz]", root);
     if (qz) {
@@ -450,7 +494,7 @@
     const gs = $("[data-gs]", root); if (gs) gs.oninput = () => root.querySelectorAll("[data-gl] .term").forEach(t => t.style.display = t.textContent.toLowerCase().includes(gs.value.toLowerCase()) ? "" : "none");
     const cs = $("[data-copy-sum]", root); if (cs) cs.onclick = () => copy(summaryText());
     const dl = $("[data-dl]", root); if (dl) dl.onclick = () => { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([summaryText()], { type: "text/markdown" })); a.download = "atlas-save-state.md"; a.click(); };
-    const rs = $("[data-reset]", root); if (rs) rs.onclick = () => { if (confirm("Reset all progress and profile?")) { S = { done: {}, quiz: {}, xp: 0, unlock: false, profile: null }; save(); route(); } };
+    const rs = $("[data-reset]", root); if (rs) rs.onclick = () => { if (confirm(LIVE ? "Reset all progress and profile? This clears this browser and the saved file on this computer, including work that has not finished syncing." : "Reset all progress and profile? This clears unsynced work in this browser. A saved file on this computer is unchanged until the guide server is running.")) { S = emptyState(); save(); route(); } };
   }
 
   $("#menu").onclick = () => $("#side").classList.toggle("open");

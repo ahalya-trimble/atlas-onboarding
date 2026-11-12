@@ -22,6 +22,7 @@ import json
 import os
 import re
 import sys
+import tempfile
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, unquote, urlparse
@@ -32,8 +33,10 @@ ALLOWED_FILES = {"AGENTS.md", "README.md"}
 ALLOWED_EXT = {".md", ".txt"}
 MAX_BYTES = 1_000_000
 DENY_NAME = re.compile(r"(\.env|appsettings|\.pfx|\.pem|\.key|\.p12|id_rsa|\.snk|\.publishsettings)", re.I)
-REDACT = re.compile(r"(?i)\b((?:password|pwd|secret|api[_-]?key|accountkey|sharedaccesskey|"
-                    r"client[_-]?secret|token)\s*[=:]\s*)([^\s;\"'`,)]{3,})")
+REDACT = re.compile(
+    r"(?i)((?:^|[^A-Za-z0-9_])[\"']?(?:password|pwd|secret|api[ _-]?key|accountkey|"
+    r"sharedaccesskey|client[_-]?secret|token)[\"']?\s*[=:]\s*)"
+    r"([\"'][^\"'\r\n]{1,200}[\"']|[^\s;\"'`,)]{3,})")
 STATIC_EXT = {".html": "text/html; charset=utf-8", ".css": "text/css; charset=utf-8",
               ".js": "text/javascript; charset=utf-8", ".json": "application/json",
               ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
@@ -50,7 +53,14 @@ PORT = 8765
 
 
 def redact(text):
-    return REDACT.sub(lambda m: m.group(1) + "[redacted]", text)
+    def hide(match):
+        value = match.group(2)
+        if len(value) >= 2 and value[0] in "\"'" and value[-1] == value[0]:
+            value = value[0] + "[redacted]" + value[-1]
+        else:
+            value = "[redacted]"
+        return match.group(1) + value
+    return REDACT.sub(hide, text)
 
 
 def sha(data):
@@ -160,6 +170,11 @@ def clean_progress(d):
     xp = d.get("xp")
     out["xp"] = max(0, min(int(xp), 100000)) if isinstance(xp, (int, float)) else 0
     out["unlock"], out["skipProfile"] = bool(d.get("unlock")), bool(d.get("skipProfile"))
+    try:
+        stamp = int(d.get("updatedAt") or 0)
+    except (TypeError, ValueError):
+        stamp = 0
+    out["updatedAt"] = stamp if 0 <= stamp <= 4_102_444_800_000 else 0
     prof = d.get("profile")
     if isinstance(prof, dict) and prof.get("role") in ROLES:
         out["profile"] = {"name": str(prof.get("name", ""))[:40], "role": prof["role"],
@@ -183,9 +198,19 @@ def save_progress(data):
     target = progress_path()
     if target.is_symlink():
         raise ValueError("refusing to write through a link")
-    tmp = target.with_suffix(".tmp")
-    tmp.write_text(json.dumps(data, indent=1) + "\n", encoding="utf-8")
-    os.replace(tmp, target)
+    current = load_progress()
+    if current and int(current.get("updatedAt") or 0) > int(data.get("updatedAt") or 0):
+        raise ValueError("stale progress")
+    fd, name = tempfile.mkstemp(prefix="explorer-progress-", suffix=".tmp", dir=STATE)
+    tmp = Path(name)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as handle:
+            handle.write(json.dumps(data, indent=1) + "\n")
+        os.replace(tmp, target)
+    except Exception:
+        if tmp.exists():
+            tmp.unlink()
+        raise
 
 
 def tokens(s):
@@ -211,7 +236,7 @@ def search(q):
         if not hits:
             continue
         hits.sort(key=lambda h: (-h[0], h[1]))
-        title = next((h["text"] for h in outline(doc[2])[0] if h["level"] == 1), rel)
+        title = redact(next((h["text"] for h in outline(doc[2])[0] if h["level"] == 1), rel))
         total = sum(h[0] for h in hits[:3]) + (3 if any(w in rel.lower() for w in qt) else 0)
         results.append({"score": total, "path": rel, "title": title,
                         "hits": [{"line": h[1], "text": redact(h[2])[:240]} for h in hits[:2]]})
@@ -273,7 +298,12 @@ class Handler(BaseHTTPRequestHandler):
             n = min(int(self.headers.get("Content-Length") or 0), 65536)
             body = json.loads(self.rfile.read(n) or b"{}")
             if u.path == "/api/progress":
-                save_progress(clean_progress(body))
+                try:
+                    save_progress(clean_progress(body))
+                except ValueError as exc:
+                    if str(exc) == "stale progress":
+                        return self._json({"error": "stale", "explorer": load_progress()}, 409)
+                    raise
                 return self._json({"ok": True})
             paths = body.get("paths", [])
             if not isinstance(paths, list):
@@ -291,7 +321,8 @@ class Handler(BaseHTTPRequestHandler):
     def api_get(self, path, q):
         arg = lambda k: (q.get(k) or [""])[0]
         if path == "/api/health":
-            return self._json({"ok": True, "docs": len(all_docs()), "atlasFolder": ATLAS.resolve().name})
+            root = ATLAS.resolve()
+            return self._json({"ok": True, "docs": len(all_docs()), "atlasFolder": root.name, "atlas": str(root)})
         if path == "/api/doc":
             d = read_doc(arg("path"))
             if not d:
@@ -316,9 +347,10 @@ class Handler(BaseHTTPRequestHandler):
                     continue
                 heads, first = outline(d[2])
                 base = lock["hashes"].get(d[0])
+                shown = [{**h, "text": redact(h["text"])} for h in heads if h["level"] in (2, 3)][:8]
                 out[p] = {"status": "ok" if base in (None, sha(d[1])) else "changed", "sha": sha(d[1]),
-                          "title": next((h["text"] for h in heads if h["level"] == 1), d[0]),
-                          "headings": [h for h in heads if h["level"] in (2, 3)][:8],
+                          "title": redact(next((h["text"] for h in heads if h["level"] == 1), d[0])),
+                          "headings": shown,
                           "summary": plain(redact(first))[:300]}
             return self._json(out)
         if path == "/api/progress":
@@ -413,20 +445,30 @@ def main():
     try:
         srv = ExclusiveServer(("127.0.0.1", PORT), Handler)
     except OSError:
-        # Already running? Then just open the browser instead of failing silently.
+        # Already running for this checkout? Then just open the browser.
         import urllib.request
+        health = None
         try:
-            req = urllib.request.Request(f"http://localhost:{PORT}/api/health", headers={"X-Requested-With": "atlas-explorer"})
-            ok = json.load(urllib.request.urlopen(req, timeout=2)).get("ok")
+            req = urllib.request.Request(
+                f"http://127.0.0.1:{PORT}/api/health",
+                headers={"X-Requested-With": "atlas-explorer"})
+            health = json.load(urllib.request.urlopen(req, timeout=2))
         except Exception:
-            ok = False
-        if ok:
+            health = None
+        named = (health or {}).get("atlas") if health and health.get("ok") else None
+        running = Path(named).resolve() if named else None
+        if running == ATLAS.resolve():
             print(f"Atlas Explorer is already running at http://localhost:{PORT}/")
             if a.open:
                 import webbrowser
                 webbrowser.open(f"http://localhost:{PORT}/")
             sys.exit(0)
-        print(f"Port {PORT} is used by another program. Close it or run: python server.py --port 8766 --open", file=sys.stderr)
+        if health and health.get("ok"):
+            where = running or "a checkout that did not identify itself"
+            print(f"Port {PORT} is already used by Atlas Explorer for {where}. "
+                  f"Close that window or run: python server.py --port 8766 --open", file=sys.stderr)
+        else:
+            print(f"Port {PORT} is used by another program. Close it or run: python server.py --port 8766 --open", file=sys.stderr)
         sys.exit(3)
     print(f"Atlas Explorer: http://localhost:{PORT}/   (read-only docs, local only; Ctrl+C to stop)")
     if a.open:
