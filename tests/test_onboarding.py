@@ -84,6 +84,11 @@ class InstallerTests(Fixture):
         self.assertTrue(self.exclude.read_bytes().startswith(self.original_exclude))
         self.assertNotIn(b"# BEGIN atlas-onboarding", self.exclude.read_bytes())
         self.assertIn(b"/.onboarding/", self.exclude.read_bytes())
+        self.assertIn(b"/.atlas-onboarding/state/", self.exclude.read_bytes())
+        ignored_state = subprocess.run(
+            ["git", "-C", str(self.atlas), "check-ignore", "-q",
+             ".atlas-onboarding/state/explorer-progress.json"], capture_output=True)
+        self.assertEqual(0, ignored_state.returncode)
         for relative in installer.FILES:
             self.assertFalse((self.atlas / relative).exists())
         ignored = subprocess.run(
