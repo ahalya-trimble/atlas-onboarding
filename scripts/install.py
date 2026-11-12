@@ -113,8 +113,11 @@ def apply_install(atlas, action):
         updates.update({safe_path(atlas, name): None for name in targets})
         updates[manifest_path] = None
         retained = old_exclude.replace(block, b"", 1)
-        if b"/.onboarding/" not in retained.splitlines():
-            retained += b"\n# Retained private Atlas onboarding data\n/.onboarding/\n"
+        retained_paths = [line for line in (b"/.onboarding/", b"/.atlas-onboarding/state/")
+                          if line not in retained.splitlines()]
+        if retained_paths:
+            retained += b"\n# Retained private Atlas onboarding data\n" + b"".join(
+                path + b"\n" for path in retained_paths)
         updates[exclude] = retained
     else:
         contents = {name: source.read_bytes() for name, source in FILES.items()}

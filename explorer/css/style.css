@@ -94,7 +94,7 @@ h1{font-size:clamp(26px,3.6vw,36px);font-weight:700;letter-spacing:-.02em;margin
 .arch .edge{fill:none;stroke:currentColor;stroke-width:1.6;opacity:.55}.arch .edge.flow{stroke:var(--acc);color:var(--acc);stroke-dasharray:7 6;animation:dash 1s linear infinite;opacity:1}
 @keyframes dash{to{stroke-dashoffset:-26}}
 .arch .elab{font-size:10.5px;fill:var(--mut)}
-.arch .node{cursor:pointer;outline:none}.arch .node rect{fill:var(--card);stroke:var(--c);stroke-width:1.6;transition:.25s}
+.arch .node{cursor:pointer}.arch .node:focus{outline:none}.arch .node:focus-visible rect{stroke:var(--acc);stroke-width:3}.arch .node rect{fill:var(--card);stroke:var(--c);stroke-width:1.6;transition:.25s}
 .arch .node text{fill:var(--tx);font-size:12.5px;font-weight:600;pointer-events:none}
 .arch .node:hover rect,.arch .node.on rect{fill:color-mix(in srgb,var(--c) 14%,var(--card));stroke-width:3;filter:drop-shadow(0 6px 10px color-mix(in srgb,var(--c) 35%,transparent))}
 .arch .node.on{animation:pulse 1.6s ease-in-out infinite}@keyframes pulse{50%{opacity:.82}}

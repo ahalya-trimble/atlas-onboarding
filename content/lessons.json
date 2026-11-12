@@ -881,7 +881,7 @@
    "shot": "recovery",
    "hook": "Two rescue tools that look similar and are NOT.",
    "points": [
-    "**Reset Almanac Offline** wipes local MongoDB; next login Force Sync rebuilds it. Safe for field techs.",
+    "**Reset Almanac Offline** wipes local MongoDB. Force Sync rebuilds server data, but it cannot restore repair changes that were never uploaded. Synchronize or copy pending work before resetting.",
     "**Environment Switch** points an install at prod/stage/dev. **Internal tool only** – never point a field technician at stage/dev.",
     "Never commit or paste connection strings, tokens or overlay-config secrets."
    ],
