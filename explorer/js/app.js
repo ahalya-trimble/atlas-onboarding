@@ -8,12 +8,16 @@
   const lessonsOf = pid => D.lessons.filter(l => l.phase === pid);
   const byId = id => D.lessons.find(l => l.id === ((D.legacyIds || {})[id] || id));
 
-  let S = { done: {}, quiz: {}, xp: 0, unlock: false, profile: null };
-  try { S = Object.assign(S, JSON.parse(localStorage.getItem(KEY) || "{}")); } catch (e) {}
+  let checkout = "";
+  const emptyState = () => ({ done: {}, quiz: {}, xp: 0, unlock: false, profile: null, updatedAt: 0 });
+  const storageKey = () => checkout ? KEY + ":" + checkout : KEY;
+  const readState = key => { try { return Object.assign(emptyState(), JSON.parse(localStorage.getItem(key) || "null") || {}); } catch (e) { return emptyState(); } };
+  let S = readState(KEY);
   const migrate = () => { const m = D.legacyIds || {}; ["done", "quiz"].forEach(k => { const o = S[k] || {}; Object.keys(m).forEach(old => { if (old in o) { o[m[old]] = o[old]; delete o[old]; } }); }); };
   migrate();
-  const isDone = id => !!S.done[id];
-  const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} pushProgress(); };
+  const localWork = () => !!(S.profile || S.skipProfile || S.xp || Object.keys(S.done || {}).length || Object.keys(S.quiz || {}).length);
+
+  const save = () => { S.updatedAt = Math.max(Date.now(), (S.updatedAt || 0) + 1); if (checkout) S.checkout = checkout; try { localStorage.setItem(storageKey(), JSON.stringify(S)); } catch (e) {} pushProgress(); };
 
   /* ---------- personalization ---------- */
   const ROLES = {
@@ -30,13 +34,13 @@
 
   const LEVELS = [["Beginner", 0], ["Associate", 150], ["Practitioner", 400], ["Specialist", 800], ["Expert", 1300]];
   const level = () => { let l = LEVELS[0]; for (const x of LEVELS) if (S.xp >= x[1]) l = x; return l[0]; };
-  const codeUnlocked = () => S.unlock || D.phases.filter(p => !p.code).every(p => lessonsOf(p.id).every(l => isDone(l.id)));
-  const pct = pid => { const ls = lessonsOf(pid); return Math.round(100 * ls.filter(l => isDone(l.id)).length / ls.length); };
-  const nextLesson = () => order().find(l => !isDone(l.id) && (!phaseOf(l.phase).code || codeUnlocked()));
+  const codeUnlocked = () => S.unlock || D.phases.filter(p => !p.code).every(p => lessonsOf(p.id).every(l => S.done[l.id]));
+  const pct = pid => { const ls = lessonsOf(pid); return Math.round(100 * ls.filter(l => S.done[l.id]).length / ls.length); };
+  const nextLesson = () => order().find(l => !S.done[l.id] && (!phaseOf(l.phase).code || codeUnlocked()));
 
   /* ---------- chrome ---------- */
   function renderTop() {
-    const total = D.lessons.length, done = D.lessons.filter(l => isDone(l.id)).length;
+    const total = D.lessons.length, done = D.lessons.filter(l => S.done[l.id]).length;
     $("#xp").innerHTML = `<span class="lvl">${S.profile ? esc(S.profile.name) + " · " : ""}${level()}</span><div class="bar"><i style="width:${Math.round(100 * done / total)}%"></i></div><span class="xpn">${done} of ${total} lessons</span>`;
   }
   function renderSide() {
@@ -45,10 +49,11 @@
       D.phases.map(p => {
         const lock = p.code && !codeUnlocked();
         return `<div class="ph" style="--c:${p.color}"><div class="phh"><b>${p.n}. ${p.name}</b><em>${pct(p.id)}%</em></div>` +
-          lessonsOf(p.id).map(l => `<a class="nav ${cur === l.id ? "on" : ""} ${isRec(l.id) ? "rec" : ""}" href="#/lesson/${l.id}"><span class="dot ${isDone(l.id) ? "ok" : lock ? "lk" : ""}"></span>${esc(l.title)}</a>`).join("") + `</div>`;
+          lessonsOf(p.id).map(l => `<a class="nav ${cur === l.id ? "on" : ""} ${isRec(l.id) ? "rec" : ""}" href="#/lesson/${l.id}"><span class="dot ${S.done[l.id] ? "ok" : lock ? "lk" : ""}"></span>${esc(l.title)}</a>`).join("") + `</div>`;
       }).join("") +
-      `<div class="ph"><a class="nav ${h === "glossary" ? "on" : ""}" href="#/glossary">Glossary</a><a class="nav ${h === "summary" ? "on" : ""}" href="#/summary">Save-state summary</a><a class="nav" href="#" data-profile>Edit my profile</a></div>`;
+      `<div class="ph"><a class="nav ${h === "glossary" ? "on" : ""}" href="#/glossary">Glossary</a><a class="nav ${h === "summary" ? "on" : ""}" href="#/summary">Save-state summary</a><a class="nav" href="#" data-profile>Edit my profile</a><a class="nav" href="#" data-tour>Take the guided tour</a></div>`;
     $("#side [data-profile]").onclick = e => { e.preventDefault(); profileModal(); };
+    const tb = $("#side [data-tour]"); if (tb) tb.onclick = e => { e.preventDefault(); tour(true); };
   }
 
   /* ---------- hero animation + flowchart + diagrams ---------- */
@@ -118,7 +123,7 @@
     const W = 170, H = 56;
     return `<svg class="arch fc" viewBox="0 0 860 470" role="img" aria-label="Atlas architecture"><defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
       ${EDGES.map(e => `<g><polyline points="${e[3].map(p => p.join(",")).join(" ")}" class="edge ${e[4] ? "flow" : ""}" marker-end="url(#ah)"/><text x="${e[3][Math.floor(e[3].length / 2)][0] + 6}" y="${e[3][Math.floor(e[3].length / 2)][1] - 4}" class="elab">${e[2]}</text></g>`).join("")}
-      ${Object.entries(NODES).map(([k, n]) => `<g class="node" data-node="${k}" tabindex="0" style="--c:${n[3]}"><rect x="${n[0]}" y="${n[1]}" width="${W}" height="${H}" rx="12"/><text x="${n[0] + W / 2}" y="${n[1] + 33}" text-anchor="middle">${esc(n[2])}</text></g>`).join("")}</svg>
+      ${Object.entries(NODES).map(([k, n]) => `<g class="node" data-node="${k}" tabindex="0" role="button" aria-label="${esc(n[2])}" style="--c:${n[3]}"><rect x="${n[0]}" y="${n[1]}" width="${W}" height="${H}" rx="12"/><text x="${n[0] + W / 2}" y="${n[1] + 33}" text-anchor="middle">${esc(n[2])}</text></g>`).join("")}</svg>
       <div class="stepinfo" data-archinfo>Select any box to see what it does. Animated lines show the main data flow.</div>`;
   }
   function dsDemo() {
@@ -174,7 +179,7 @@
 
   /* ---------- views ---------- */
   function home() {
-    const nx = nextLesson(), r = role(), done = D.lessons.filter(l => isDone(l.id)).length;
+    const nx = nextLesson(), r = role(), done = D.lessons.filter(l => S.done[l.id]).length;
     return `<section class="hero"><div class="eyebrow">${S.profile ? "Welcome, " + esc(S.profile.name) : "Onboarding guide"}</div><h1>Atlas Explorer</h1>
       <p>A visual guide to the <b>ATLAS desktop</b> and <b>eATLAS web</b> applications. We start with the concepts, then move into the source code.${r ? ` <b>Your path:</b> ${esc(r.label)}. ${esc(r.blurb)}` : ""}</p>
       <div class="row">${nx ? `<a class="btn big" href="#/lesson/${nx.id}">${done ? "Continue" : "Start"}: ${esc(nx.title)}</a>` : `<span class="btn big">All lessons complete</span>`}<a class="btn ghost" href="#/setup">Setup guide</a><a class="btn ghost" href="#" data-ask-open>Ask the tutor</a></div>${heroSvg()}</section>
@@ -182,9 +187,9 @@
       D.phases.map(p => {
         const lock = p.code && !codeUnlocked(), ls = lessonsOf(p.id);
         return `<article class="isle" style="--c:${p.color}"><div class="ring" style="--p:${pct(p.id)}"><span>${p.n}</span></div>
-        <h3>${p.name}</h3><p>${p.sub}</p><small>${ls.filter(l => isDone(l.id)).length} of ${ls.length} lessons complete</small>
-        <div class="chips">${ls.map(l => `<a class="chip ${isDone(l.id) ? "ok" : ""} ${isRec(l.id) ? "rec" : ""}" href="#/lesson/${l.id}" title="${esc(l.tag)}">${esc(l.title)}</a>`).join("")}</div>
-        ${lock ? `<div class="lock">Locked until islands 1 to 4 are done. <a href="#" data-unlock>Skip ahead</a></div>` : ""}</article>`;
+        <h3>${p.name}</h3><p>${p.sub}</p><small>${ls.filter(l => S.done[l.id]).length} of ${ls.length} lessons complete</small>
+        <div class="chips">${ls.map(l => `<a class="chip ${S.done[l.id] ? "ok" : ""} ${isRec(l.id) ? "rec" : ""}" href="#/lesson/${l.id}" title="${esc(l.tag)}">${esc(l.title)}</a>`).join("")}</div>
+        ${lock ? `<div class="lock">Locked until sections 1 to 4 are done. <a href="#" data-unlock>Skip ahead</a></div>` : ""}</article>`;
       }).join("") + `</div>
       <h2 class="sec">How this works</h2><div class="cards3">
       <div class="card"><b>One idea at a time</b><span>Each lesson has a picture, key points, a mini-quiz and the source doc.</span></div>
@@ -196,9 +201,9 @@
   function lessonView(l) {
     const p = phaseOf(l.phase), locked = p.code && !codeUnlocked();
     const idx = D.lessons.indexOf(l), prev = D.lessons[idx - 1], next = D.lessons[idx + 1], num = p.n + "." + (lessonsOf(p.id).indexOf(l) + 1);
-    if (locked) return `<div class="lessonhead" style="--c:${p.color}"><h1>${esc(l.title)}</h1><p>The Source Code island unlocks after islands 1 to 4. That way you know the story before reading the code.</p><a class="btn" href="#" data-unlock>Skip ahead</a> <a class="btn ghost" href="#/home">Back to overview</a></div>`;
+    if (locked) return `<div class="lessonhead" style="--c:${p.color}"><h1>${esc(l.title)}</h1><p>The Source Code section unlocks after sections 1 to 4, so you understand how Atlas works before reading the code.</p><a class="btn" href="#" data-unlock>Skip ahead</a> <a class="btn ghost" href="#/home">Back to overview</a></div>`;
     const q = l.quiz;
-    return `<div class="lessonhead" style="--c:${p.color}"><div class="crumb">${p.n}. ${p.name}${isRec(l.id) ? " &middot; recommended for you" : ""}</div><h1><span class="ib">${num}</span>${esc(l.title)}</h1><div class="tag">${esc(l.tag)}</div></div>
+    return `<div class="lessonhead" style="--c:${p.color}"><div class="crumb">${p.n}. ${p.name}${isRec(l.id) ? ` &middot; recommended for you` : ""}</div><h1><span class="ib">${num}</span>${esc(l.title)}</h1><div class="tag">${esc(l.tag)}</div></div>
       <div class="hookbox" style="--c:${p.color}"><b>In short:</b> ${md(l.hook)}</div>
       ${l.goals && l.goals.length ? `<div class="goals"><b>After this lesson you can</b><ul>${l.goals.map(g => `<li>${esc(g)}</li>`).join("")}</ul></div>` : ""}
       <div class="viz" style="--c:${p.color}">${viz(l.viz)}</div>
@@ -237,7 +242,7 @@
       <div class="terms big" data-gl>${Object.entries(D.glossary).map(([k, v]) => `<div class="term"><b>${esc(k)}</b><span>${md(v)}</span></div>`).join("")}</div>`;
   }
   function summaryText() {
-    const done = D.lessons.filter(l => isDone(l.id)), left = D.lessons.filter(l => !isDone(l.id)), nx = nextLesson();
+    const done = D.lessons.filter(l => S.done[l.id]), left = D.lessons.filter(l => !S.done[l.id]), nx = nextLesson();
     const terms = [...new Set(done.flatMap(l => l.terms))];
     return ["# Atlas Save State Summary", `_${new Date().toLocaleString()}_  |  Level: ${level()}`, profileLine(), "",
       "## What I learned", ...(done.length ? done.map(l => `- **${l.title}** - ${l.tag}`) : ["- (nothing yet)"]), "",
@@ -252,19 +257,69 @@
       <div class="row"><button class="btn" data-copy-sum>Copy</button><button class="btn ghost" data-dl>Download .md</button><button class="btn ghost danger" data-reset>Reset progress</button></div>`;
   }
 
+  /* ---------- first-use guided tour ---------- */
+  const TOUR = [
+    ["#side", "Lessons menu", "Lessons are grouped into five sections, in the order we suggest you learn them. A dot turns green when you complete a lesson."],
+    ["#side .nav.rec", "Blue bar on the left", "A lesson with a blue bar is suggested for your role. Other lessons are not hidden; you can open any lesson at any time. Change your role under Edit my profile."],
+    ["#xp", "Your progress", "This shows your level and how many lessons you have completed. It is saved on this computer."],
+    [".hero .btn.big", "Start or continue", "Opens the next lesson on your path, so you never have to choose where to go next."],
+    [".map", "Learning path", "The same sections as cards. A dashed outline marks lessons suggested for your role, and a coloured fill marks completed ones."],
+    [".askfab", "Ask the tutor", "Search the guide and the Atlas documents here. For answers from the live code, use the ATLAS Tutor agent in your IDE."]];
+  function tour(manual) {
+    if (!manual) { try { if (localStorage.getItem("atlas-tour") === "1") return; } catch (e) { } }
+    try { localStorage.setItem("atlas-tour", "1"); } catch (e) { }
+    if (location.hash && location.hash !== "#/home" && location.hash !== "#/") location.hash = "#/home";
+    let i = 0; const o = document.createElement("div"); o.className = "tour";
+    o.innerHTML = `<div class="tspot"></div><div class="tpop" role="dialog" aria-live="polite"><small data-tn></small><h3 data-tt></h3><p data-tb></p><div class="row"><button class="btn ghost" data-tskip>Skip tour</button><button class="btn ghost" data-tprev>Back</button><button class="btn" data-tnext>Next</button></div></div>`;
+    document.body.appendChild(o);
+    const spot = $(".tspot", o), pop = $(".tpop", o), end = () => { o.remove(); window.removeEventListener("resize", show); };
+    function show() {
+      const [sel, title, body] = TOUR[i], el = $(sel);
+      $("[data-tn]", o).textContent = `Step ${i + 1} of ${TOUR.length}`; $("[data-tt]", o).textContent = title; $("[data-tb]", o).textContent = body;
+      $("[data-tprev]", o).hidden = i === 0; $("[data-tnext]", o).textContent = i === TOUR.length - 1 ? "Done" : "Next";
+      if (!el) { spot.style.cssText = "display:none"; pop.style.cssText = "left:50%;top:50%;transform:translate(-50%,-50%)"; return; }
+      el.scrollIntoView({ block: "nearest" }); const r = el.getBoundingClientRect();
+      spot.style.cssText = `left:${r.left - 6}px;top:${r.top - 6}px;width:${r.width + 12}px;height:${r.height + 12}px`;
+      const pw = Math.min(340, innerWidth - 24); let x = r.right + 16, y = r.top;
+      if (x + pw > innerWidth - 12) { x = Math.max(12, Math.min(r.left, innerWidth - pw - 12)); y = r.bottom + 16; }
+      if (y + 200 > innerHeight) y = Math.max(12, innerHeight - 220);
+      pop.style.cssText = `left:${x}px;top:${y}px;width:${pw}px`;
+    }
+    $("[data-tnext]", o).onclick = () => { if (i === TOUR.length - 1) end(); else { i++; show(); } };
+    $("[data-tprev]", o).onclick = () => { i--; show(); };
+    $("[data-tskip]", o).onclick = end; window.addEventListener("resize", show); show();
+  }
+
   /* ---------- profile modal ---------- */
   function profileModal(first) {
     const p = S.profile || { name: "", role: "technician", exp: "new to Atlas", goal: "" };
+    const where = LIVE
+      ? "Saved in this browser and in .atlas-onboarding/state/explorer-progress.json on this computer. It sets your recommended path and is copied into prompts you send to the tutor."
+      : "Stored only in this browser until you start the guide with Open Atlas Explorer.bat. It sets your recommended path and is copied into prompts you send to the tutor.";
+    const prev = document.activeElement;
     const m = document.createElement("div"); m.className = "modal";
-    m.innerHTML = `<div class="dlg"><h2>${first ? "Welcome. Let's personalize your guide" : "Your profile"}</h2><p class="mut">Stored only in this browser. It sets your recommended path and adds context to the prompts you copy.</p>
+    m.innerHTML = `<div class="dlg" role="dialog" aria-modal="true" aria-labelledby="profile-title"><h2 id="profile-title">${first ? "Welcome. Let's personalize your guide" : "Your profile"}</h2><p class="mut">${esc(where)}</p>
       <label>First name<input data-n value="${esc(p.name)}" placeholder="e.g. Ahalya"/></label>
       <label>Your role<select data-r>${Object.entries(ROLES).map(([k, v]) => `<option value="${k}" ${p.role === k ? "selected" : ""}>${v.label}</option>`).join("")}</select></label>
       <label>Experience with Atlas<select data-e>${["new to Atlas", "some experience", "experienced"].map(x => `<option ${p.exp === x ? "selected" : ""}>${x}</option>`).join("")}</select></label>
       <label>What do you want to achieve? (optional)<input data-g value="${esc(p.goal)}" placeholder="e.g. fix eAtlas assignment bugs"/></label>
       <div class="row"><button class="btn" data-ok>Save</button><button class="btn ghost" data-skip>${first ? "Skip for now" : "Cancel"}</button></div></div>`;
     document.body.appendChild(m);
-    $("[data-ok]", m).onclick = () => { S.profile = { name: $("[data-n]", m).value.trim() || "Explorer", role: $("[data-r]", m).value, exp: $("[data-e]", m).value, goal: $("[data-g]", m).value.trim() }; save(); m.remove(); route(); };
-    $("[data-skip]", m).onclick = () => { if (first) { S.skipProfile = true; save(); } m.remove(); };
+    const dlg = $(".dlg", m);
+    const focusables = () => [...dlg.querySelectorAll("input, select, button")];
+    const close = () => { document.removeEventListener("keydown", trap); m.remove(); if (prev && prev.focus) prev.focus(); };
+    function trap(e) {
+      if (e.key === "Escape") { e.preventDefault(); $("[data-skip]", m).click(); return; }
+      if (e.key !== "Tab") return;
+      const items = focusables(); if (!items.length) return;
+      const firstEl = items[0], lastEl = items[items.length - 1];
+      if (e.shiftKey && document.activeElement === firstEl) { e.preventDefault(); lastEl.focus(); }
+      else if (!e.shiftKey && document.activeElement === lastEl) { e.preventDefault(); firstEl.focus(); }
+    }
+    document.addEventListener("keydown", trap);
+    $("[data-ok]", m).onclick = () => { S.profile = { name: $("[data-n]", m).value.trim() || "Explorer", role: $("[data-r]", m).value, exp: $("[data-e]", m).value, goal: $("[data-g]", m).value.trim() }; save(); close(); route(); };
+    $("[data-skip]", m).onclick = () => { if (first) { S.skipProfile = true; save(); } close(); };
+    focusables()[0].focus();
   }
 
   /* ---------- offline ask helper ---------- */
@@ -300,23 +355,61 @@
   /* ---------- live source docs (local, read-only, nothing is stored in the browser) ---------- */
   let LIVE = false;
   const api = (path, opt) => fetch(path, Object.assign({ headers: { "X-Requested-With": "atlas-explorer" }, cache: "no-store" }, opt)).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); });
-  const hasApi = () => api("/api/health").then(() => { LIVE = true; }, () => { LIVE = false; });
+  const hasApi = () => api("/api/health").then(h => {
+    LIVE = true;
+    if (!h || !h.atlas) return;
+    checkout = h.atlas;
+    let stored = null;
+    try { stored = localStorage.getItem(storageKey()); } catch (e) { stored = null; }
+    if (stored) { S = readState(storageKey()); migrate(); return; }
+    const legacy = readState(KEY);
+    const claimed = legacy.checkout && legacy.checkout !== checkout;
+    const legacyWork = legacy.profile || legacy.skipProfile || legacy.xp || Object.keys(legacy.done || {}).length;
+    if (!claimed && !legacy.checkout && legacyWork) {
+      legacy.checkout = checkout;
+      S = legacy;
+      try { localStorage.setItem(KEY, JSON.stringify(legacy)); localStorage.setItem(storageKey(), JSON.stringify(legacy)); } catch (e) {}
+    } else S = emptyState();
+    migrate();
+  }, () => { LIVE = false; });
   const q2 = p => encodeURIComponent(p);
 
   const chipsFor = (heads, want) => { const w = (want || []).map(x => x.toLowerCase()); const m = heads.filter(h => w.includes(h.text.toLowerCase())); return m.length ? m : heads.slice(0, 6); };
 
   /* progress is kept in one local file on this computer (and in the browser as a backup) */
-  let pushT = null;
+  let pushT = null, syncWarned = false;
+  function applyState(next) {
+    S = Object.assign(emptyState(), next); migrate();
+    try { localStorage.setItem(storageKey(), JSON.stringify(S)); } catch (e) {}
+  }
+  const sameCheckout = body => !!(body && body.atlas && checkout && body.atlas === checkout);
   function pushProgress() {
-    if (!LIVE) return; clearTimeout(pushT);
-    pushT = setTimeout(() => api("/api/progress", { method: "POST", headers: { "X-Requested-With": "atlas-explorer", "Content-Type": "application/json" }, body: JSON.stringify(S) }).catch(() => { }), 400);
+    if (!LIVE || !checkout) return; clearTimeout(pushT);
+    pushT = setTimeout(() => {
+      const sentAt = +S.updatedAt || 0, sentCheckout = checkout;
+      const payload = Object.assign({}, S, { checkout: sentCheckout });
+      fetch("/api/progress", { method: "POST", headers: { "X-Requested-With": "atlas-explorer", "Content-Type": "application/json" }, body: JSON.stringify(payload), cache: "no-store" }).then(r => {
+        if (r.status === 409) return r.json().then(body => {
+          if (!sameCheckout(body) || body.atlas !== sentCheckout) return;
+          const remote = body.explorer, remoteT = remote ? (+remote.updatedAt || 0) : 0, nowT = +S.updatedAt || 0;
+          if (remote && remoteT > nowT) { applyState(remote); route(); return; }
+          if (nowT > sentAt || nowT > remoteT) pushProgress();
+        });
+        if (!r.ok) throw new Error(r.status);
+        syncWarned = false;
+        if ((+S.updatedAt || 0) > sentAt) pushProgress();
+      }).catch(() => { if (!syncWarned) { syncWarned = true; toast("Progress stayed in this browser. It was not saved to the file on this computer."); } });
+    }, 400);
   }
   function loadProgress() {
     if (!LIVE) return Promise.resolve();
     return api("/api/progress").then(r => {
-      if (r.explorer) { S = Object.assign({ done: {}, quiz: {}, xp: 0, unlock: false, profile: null }, r.explorer); migrate(); try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { } }
-      else if (S.profile || Object.keys(S.done).length || S.xp) pushProgress();
-    }).catch(() => { });
+      if (!sameCheckout(r)) return;
+      const disk = r.explorer, diskT = disk ? (+disk.updatedAt || 0) : 0, localT = +S.updatedAt || 0;
+      if (disk && !diskT && !localT) { applyState(disk); return; }
+      if (disk && diskT > localT) applyState(disk);
+      else if ((!disk && localWork()) || localT > diskT) pushProgress();
+    }).catch(() => toast("Could not read progress saved on this computer."));
   }
 
   function loadLive(el) {
@@ -432,7 +525,7 @@
       pb.onclick = () => { clearInterval(tm); let i = 0; show(0); pb.textContent = "Playing..."; tm = setInterval(() => { i++; if (i >= bs.length) { clearInterval(tm); pb.textContent = "Replay"; return; } show(i); }, 1700); };
     });
     root.querySelectorAll("[data-mock]").forEach(b => b.onclick = () => { root.querySelectorAll("[data-mock]").forEach(x => x.classList.remove("on")); b.classList.add("on"); const d = MOCK[b.dataset.mock]; $("[data-mockmain]", root).innerHTML = `<h4>${d[0]}</h4><p>${d[1]}</p>`; });
-    root.querySelectorAll("[data-node]").forEach(g => { const f = () => { root.querySelectorAll("[data-node]").forEach(x => x.classList.remove("on")); g.classList.add("on"); const n = NODES[g.dataset.node]; $("[data-archinfo]", root).innerHTML = `<b>${esc(n[2])}</b> &mdash; ${md(n[4])}`; }; g.onclick = f; g.onkeydown = e => { if (e.key === "Enter") f(); }; });
+    root.querySelectorAll("[data-node]").forEach(g => { const f = () => { root.querySelectorAll("[data-node]").forEach(x => x.classList.remove("on")); g.classList.add("on"); const n = NODES[g.dataset.node]; $("[data-archinfo]", root).innerHTML = `<b>${esc(n[2])}</b> &mdash; ${md(n[4])}`; }; g.onclick = f; g.onkeydown = e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); f(); } }; });
     const ds = $(".ds", root); if (ds) { ds.querySelectorAll("select").forEach(s => s.onchange = () => dsCalc(ds)); dsCalc(ds); }
     const qz = $("[data-quiz]", root);
     if (qz) {
@@ -450,7 +543,7 @@
     const gs = $("[data-gs]", root); if (gs) gs.oninput = () => root.querySelectorAll("[data-gl] .term").forEach(t => t.style.display = t.textContent.toLowerCase().includes(gs.value.toLowerCase()) ? "" : "none");
     const cs = $("[data-copy-sum]", root); if (cs) cs.onclick = () => copy(summaryText());
     const dl = $("[data-dl]", root); if (dl) dl.onclick = () => { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([summaryText()], { type: "text/markdown" })); a.download = "atlas-save-state.md"; a.click(); };
-    const rs = $("[data-reset]", root); if (rs) rs.onclick = () => { if (confirm("Reset all progress and profile?")) { S = { done: {}, quiz: {}, xp: 0, unlock: false, profile: null }; save(); route(); } };
+    const rs = $("[data-reset]", root); if (rs) rs.onclick = () => { if (confirm(LIVE ? "Reset all progress and profile? This clears this browser and the saved file on this computer, including work that has not finished syncing." : "Reset all progress and profile? This clears unsynced work in this browser. A saved file on this computer is unchanged until the guide server is running.")) { S = emptyState(); save(); route(); } };
   }
 
   $("#menu").onclick = () => $("#side").classList.toggle("open");

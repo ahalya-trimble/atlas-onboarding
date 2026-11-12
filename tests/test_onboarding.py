@@ -56,32 +56,13 @@ class Fixture(unittest.TestCase):
         store.initialize()
         return store
 
-    def attempt(self, store, topic=None, **changes):
-        lesson = store.lessons[topic or next(iter(store.lessons))]
+    def save_summary(self, store, **changes):
         revision = store.progress()["revision"]
-        payload = {
-            "id": f"attempt-{revision}",
-            "expectedRevision": revision,
-            "topicId": lesson["id"],
-            "questionId": lesson["assessment"]["id"],
-            "question": lesson["assessment"]["question"],
-            "answer": "Original learner answer",
-            "kind": "teach_back",
-            "assistance": "none",
-            "result": "demonstrated",
-            "correctConcepts": lesson["assessment"]["requiredConcepts"].copy(),
-            "missingConcepts": [],
-            "misconceptions": [],
-            "feedback": "All required concepts demonstrated.",
-            "sourcePaths": [source["path"] for source in lesson["sources"]],
-            "sourceRevision": None,
-        }
+        payload = {"id": f"session-{revision}", "expectedRevision": revision,
+                   "currentTopicId": "atlas-overview", "summary": "Discussed who uses Atlas",
+                   "nextStep": "Ask how assignment works", "openQuestions": []}
         payload.update(changes)
-        return payload
-
-    def save_attempt(self, store, **changes):
-        payload = self.attempt(store, **changes)
-        store.write("record-attempt", payload)
+        store.write("save-session", payload)
         return payload
 
 
@@ -93,7 +74,7 @@ class InstallerTests(Fixture):
         self.assertTrue(self.install()["verified"])
         store = self.store()
         store.initialize()
-        self.save_attempt(store)
+        self.save_summary(store)
         before = store.path.read_bytes()
         self.assertTrue(installer.install(self.atlas, "update")["verified"])
         self.assertEqual(before, store.path.read_bytes())
@@ -103,6 +84,11 @@ class InstallerTests(Fixture):
         self.assertTrue(self.exclude.read_bytes().startswith(self.original_exclude))
         self.assertNotIn(b"# BEGIN atlas-onboarding", self.exclude.read_bytes())
         self.assertIn(b"/.onboarding/", self.exclude.read_bytes())
+        self.assertIn(b"/.atlas-onboarding/state/", self.exclude.read_bytes())
+        ignored_state = subprocess.run(
+            ["git", "-C", str(self.atlas), "check-ignore", "-q",
+             ".atlas-onboarding/state/explorer-progress.json"], capture_output=True)
+        self.assertEqual(0, ignored_state.returncode)
         for relative in installer.FILES:
             self.assertFalse((self.atlas / relative).exists())
         ignored = subprocess.run(
@@ -283,17 +269,18 @@ class InstallerTests(Fixture):
     def test_tutor_is_question_and_answer_not_a_second_course(self):
         agent, workflow, _ = self.texts()
         for content in (agent, workflow):
-            self.assertIn("Ask me anything about Atlas or eAtlas", content)
             self.assertNotIn("Let's explore Atlas step by step", content)
             self.assertNotIn("What you will learn", content)
-            self.assertNotIn("Start here", content.replace('no "Start here" list', ""))
-        self.assertIn("no syllabus diagram", workflow)
+            self.assertIn("Do not show a syllabus", content)
+        self.assertIn("# Welcome to ATLAS Tutor", workflow)
+        self.assertIn("## What Atlas Explorer does", workflow)
+        self.assertIn("They do not record coverage", workflow)
+        self.assertIn("single final welcome", agent)
         self.assertIn("no Done/Next coverage", workflow)
         self.assertIn("**You can ask next**", workflow)
         self.assertIn("Q1-Q3", agent)
         self.assertIn("mark assumptions", agent)
         self.assertIn("visual guide", agent)
-        self.assertNotIn("S1", workflow)
 
     def test_tutor_saves_summaries_only_and_never_coverage_or_assessments(self):
         agent, workflow, _ = self.texts()
@@ -348,19 +335,6 @@ class InstallerTests(Fixture):
             self.assertIn("Ignore", content)
         self.assertIn("never as evidence of understanding", " ".join(agent.split()))
 
-    def test_progress_lists_saved_sessions_for_revisit(self):
-        store = self.init_store()
-        self.assertEqual([], store.progress()["sessions"])
-        for index in (1, 2):
-            store.write("save-session", {
-                "id": f"s{index}", "expectedRevision": index - 1,
-                "currentTopicId": next(iter(store.lessons)),
-                "summary": f"Discussed question {index}", "nextStep": "Ask more",
-                "openQuestions": []})
-        sessions = store.progress()["sessions"]
-        self.assertEqual(["s1", "s2"], [item["id"] for item in sessions])
-        self.assertEqual("s2", store.progress()["lastSession"]["id"])
-
     def install_legacy_package(self):
         files = {name: source for name, source in installer.FILES.items()
                  if name in installer.LEGACY_FILES}
@@ -371,7 +345,7 @@ class InstallerTests(Fixture):
         self.install_legacy_package()
         store = self.store()
         store.initialize()
-        self.save_attempt(store)
+        self.save_summary(store)
         before = store.path.read_bytes()
         self.assertTrue(installer.install(self.atlas, "update")["verified"])
         skill = self.atlas / ".github" / "skills" / "quiz" / "SKILL.md"
@@ -444,160 +418,18 @@ def sys_executable():
     return sys.executable
 
 
-class CoverageTests(Fixture):
-    def coverage(self, store, topic=None, **changes):
-        topic = topic or next(iter(store.lessons))
-        payload = {
-            "id": f"coverage-{store.progress()['revision']}",
-            "expectedRevision": store.progress()["revision"],
-            "topicId": topic,
-            "confirmation": "Done",
-            "summary": "Explained the topic from inspected repository sources.",
-            "sourcePaths": [source["path"] for source in store.lessons[topic]["sources"]],
-            "sourceRevision": None,
-        }
-        payload.update(changes)
-        return payload
-
-    def test_coverage_resumes_without_assessment_or_review(self):
-        store = self.init_store()
-        payload = self.coverage(store, confirmation=" next ")
-        store.write("record-coverage", payload)
-        progress = self.store().progress()
-        self.assertEqual(1, progress["revision"])
-        self.assertEqual("atlas-startup-navigation", progress["nextTopic"])
-        self.assertEqual("completed", progress["topics"][0]["status"])
-        self.assertEqual("covered", progress["topics"][0]["understanding"])
-        self.assertEqual([payload], progress["attempts"])
-        self.assertEqual([], progress["dueReviews"])
-        with contextlib.closing(store.connect()) as connection:
-            row = connection.execute("SELECT kind, result, timestamp FROM attempts").fetchone()
-            self.assertEqual(("coverage", "covered"), (row["kind"], row["result"]))
-            self.assertIsNotNone(row["timestamp"])
-            self.assertEqual(0, connection.execute("SELECT COUNT(*) FROM reviews").fetchone()[0])
-
-    def test_confirmation_and_payload_validation_do_not_advance(self):
-        store = self.init_store()
-        for changes in ({"confirmation": "Hi"}, {"confirmation": ""},
-                        {"confirmation": None}, {"topicId": "unknown"},
-                        {"summary": ""}, {"question": "An unwanted quiz"}):
-            with self.subTest(changes=changes), self.assertRaises(ValueError):
-                store.write("record-coverage", self.coverage(store, **changes))
-        self.assertEqual(0, store.progress()["revision"])
-        self.assertEqual([], store.progress()["topics"])
-
-    def test_coverage_checks_sources_and_prerequisites(self):
-        store = self.init_store()
-        for sources in ([], "docs/projects/example.md", [None],
-                        ["..\\outside.md"], ["docs/projects/missing.md"],
-                        ["docs/projects/01-atlas-application.md"] * 2):
-            with self.subTest(sources=sources), self.assertRaises(ValueError):
-                store.write("record-coverage", self.coverage(store, sourcePaths=sources))
-        with self.assertRaisesRegex(ValueError, "Prerequisites"):
-            store.write("record-coverage", self.coverage(store, "atlas-startup-navigation"))
-        self.assertEqual([], store.progress()["attempts"])
-
-    def test_coverage_retries_and_stale_writes(self):
-        store = self.init_store()
-        payload = self.coverage(store)
-        store.write("record-coverage", payload)
-        self.assertTrue(store.write("record-coverage", payload)["replayed"])
-        with self.assertRaisesRegex(ValueError, "different content"):
-            store.write("record-coverage", dict(payload, summary="Different summary"))
-        with self.assertRaisesRegex(ValueError, "Stale revision"):
-            store.write("record-coverage", dict(payload, id="stale-coverage"))
-        self.assertEqual(1, store.progress()["revision"])
-        self.assertEqual(1, len(store.progress()["attempts"]))
-
-    def test_all_topics_can_be_covered_without_quizzes(self):
-        store = self.init_store()
-        for index, topic in enumerate(store.lessons):
-            self.assertEqual(topic, store.progress()["nextTopic"])
-            store.write("record-coverage", self.coverage(store, topic))
-            self.assertEqual(index + 1, store.progress()["revision"])
-        progress = store.progress()
-        self.assertEqual(len(store.lessons), len(progress["topics"]))
-        self.assertTrue(all(topic["understanding"] == "covered" for topic in progress["topics"]))
-        self.assertIsNone(progress["nextTopic"])
-        self.assertEqual([], progress["dueReviews"])
-
-    def test_existing_assessments_and_checkpoints_are_preserved(self):
-        store = self.init_store()
-        historical = self.save_attempt(store)
-        store.write("record-coverage", self.coverage(store))
-        self.assertEqual(historical, store.progress()["attempts"][0])
-        self.assertEqual([], store.progress()["dueReviews"])
-        session = {"id": "automatic-checkpoint", "expectedRevision": 2,
-                   "currentTopicId": "atlas-startup-navigation",
-                   "summary": "Explained startup; learner has not said Done or Next.",
-                   "nextStep": "Continue explaining desktop navigation.", "openQuestions": []}
-        store.write("save-session", session)
-        progress = self.store().progress()
-        self.assertTrue(progress["consent"])
-        self.assertEqual(session, progress["lastSession"])
-        self.assertEqual(1, len(progress["topics"]))
-        self.assertEqual("atlas-startup-navigation", progress["nextTopic"])
-
-    def test_curriculum_change_requires_renewed_coverage(self):
-        store = self.init_store()
-        for topic in list(store.lessons)[:2]:
-            store.write("record-coverage", self.coverage(store, topic))
-        changed = copy.deepcopy(store.curriculum)
-        changed["lessons"][0]["objectives"].append("Updated product purpose")
-        path = self.atlas / "changed-curriculum.json"
-        path.write_text(json.dumps(changed))
-        newer = database.Store(self.atlas, path)
-        self.assertEqual("atlas-overview", newer.progress()["nextTopic"])
-        with self.assertRaisesRegex(ValueError, "Prerequisites"):
-            newer.write("record-coverage", self.coverage(newer, "atlas-startup-navigation"))
-        newer.write("record-coverage", self.coverage(newer, "atlas-overview"))
-        self.assertEqual(3, len(newer.progress()["attempts"]))
-        self.assertEqual("atlas-access-and-licensing", newer.progress()["nextTopic"])
-
-    def test_coverage_rolls_back_atomically(self):
-        store = self.init_store()
-        with contextlib.closing(store.connect()) as connection, connection:
-            connection.execute(
-                "CREATE TRIGGER reject_topic BEFORE INSERT ON topics "
-                "BEGIN SELECT RAISE(ABORT, 'fixture topic failure'); END")
-        with self.assertRaisesRegex(sqlite3.IntegrityError, "fixture topic failure"):
-            store.write("record-coverage", self.coverage(store))
-        progress = store.progress()
-        self.assertEqual(0, progress["revision"])
-        self.assertEqual([], progress["attempts"])
-        self.assertEqual([], progress["topics"])
-
-    def test_installed_cli_records_coverage_and_checkpoint(self):
-        store = self.init_store()
-        command = [sys_executable(), str(self.atlas / ".atlas-onboarding" / "onboarding.py"),
-                   "--atlas", str(self.atlas)]
-        payload = self.coverage(store, summary="Explained Atlas: $(not a command)\n'@\n\"quoted\"")
-        for action, data in (
-                ("record-coverage", payload),
-                ("save-session", {"id": "checkpoint", "expectedRevision": 1,
-                                  "currentTopicId": "atlas-startup-navigation",
-                                  "summary": "Atlas overview covered.",
-                                  "nextStep": "Explain startup.", "openQuestions": []})):
-            result = subprocess.run(command + [action], input=json.dumps(data),
-                                    capture_output=True, text=True)
-            self.assertEqual(0, result.returncode, result.stderr)
-            self.assertTrue(json.loads(result.stdout)["saved"])
-        resumed = subprocess.run(command + ["next-topic"], capture_output=True, text=True)
-        self.assertEqual(0, resumed.returncode, resumed.stderr)
-        progress = json.loads(resumed.stdout)
-        self.assertEqual(payload, progress["attempts"][0])
-        self.assertEqual("Explain startup.", progress["lastSession"]["nextStep"])
-        self.assertEqual("atlas-startup-navigation", progress["nextTopic"])
-        self.assertEqual([], progress["dueReviews"])
-
-
 class StoreTests(Fixture):
+    def command(self):
+        self.install()
+        return [sys_executable(), str(self.atlas / ".atlas-onboarding" / "onboarding.py"),
+                "--atlas", str(self.atlas)]
+
     def test_read_before_initialization_creates_nothing(self):
         result = self.store().progress()
         self.assertFalse(result["consent"])
+        self.assertEqual([], result["sessions"])
         self.assertFalse((self.atlas / ".onboarding").exists())
         self.assertIn("Show the automatic-saving notice", result["message"])
-        self.assertFalse((self.atlas / ".onboarding").exists())
 
     def test_init_requires_git_ignored_data(self):
         with self.assertRaisesRegex(ValueError, "Git-ignored"):
@@ -605,9 +437,7 @@ class StoreTests(Fixture):
         self.assertFalse((self.atlas / ".onboarding").exists())
 
     def test_installed_cli_initializes_without_tracking_choice(self):
-        self.install()
-        command = [sys_executable(), str(self.atlas / ".atlas-onboarding" / "onboarding.py"),
-                   "--atlas", str(self.atlas)]
+        command = self.command()
         inspected = subprocess.run(command + ["get-progress"], capture_output=True, text=True)
         self.assertEqual(0, inspected.returncode, inspected.stderr)
         self.assertFalse(json.loads(inspected.stdout)["saved"])
@@ -617,7 +447,7 @@ class StoreTests(Fixture):
         progress = json.loads(initialized.stdout)
         self.assertTrue(progress["saved"])
         self.assertEqual(0, progress["revision"])
-        self.assertEqual([], progress["topics"])
+        self.assertEqual([], progress["sessions"])
         self.assertIsNone(progress["lastSession"])
         before = self.store().path.read_bytes()
         repeated = subprocess.run(command + ["init"], capture_output=True, text=True)
@@ -630,153 +460,35 @@ class StoreTests(Fixture):
         subprocess.run(["git", "-C", str(self.atlas), "add", "-f",
                         ".onboarding/onboarding.db"], check=True, capture_output=True)
         with self.assertRaisesRegex(ValueError, "Git-ignored and untracked"):
-            self.save_attempt(store)
+            self.save_summary(store)
         self.assertEqual(0, store.progress()["revision"])
-
-    def test_first_demonstration_and_resume(self):
-        store = self.init_store()
-        payload = self.save_attempt(store)
-        progress = self.store().progress()
-        self.assertEqual(1, progress["revision"])
-        self.assertEqual("atlas-startup-navigation", progress["nextTopic"])
-        self.assertEqual("completed", progress["topics"][0]["status"])
-        self.assertEqual(payload, progress["attempts"][0])
-        with contextlib.closing(store.connect()) as connection:
-            review = connection.execute("SELECT * FROM reviews").fetchone()
-            self.assertEqual(0, review["stage"])
-            self.assertEqual((date.today() + timedelta(days=1)).isoformat(), review["due_date"])
-            self.assertIsNotNone(connection.execute("SELECT timestamp FROM attempts").fetchone()[0])
-
-    def test_cannot_bypass_prerequisites_or_modules(self):
-        store = self.init_store()
-        for topic in ("atlas-startup-navigation", "eatlas-overview"):
-            if topic not in store.lessons:
-                topic = next(item["id"] for item in store.lessons.values()
-                             if item["moduleId"] == "eatlas-essentials")
-            with self.assertRaisesRegex(ValueError, "Prerequisites"):
-                store.write("record-attempt", self.attempt(store, topic))
-        self.assertEqual([], store.progress()["attempts"])
-        self.assertEqual(0, store.progress()["revision"])
-
-    def test_all_lessons_complete_in_curriculum_order(self):
-        store = self.init_store()
-        self.assertEqual(30, len(store.lessons))
-        for index, lesson in enumerate(store.lessons.values()):
-            progress = store.progress()
-            self.assertEqual(lesson["id"], progress["nextTopic"])
-            store.write("record-attempt", self.attempt(store, lesson["id"]))
-            self.assertEqual(index + 1, store.progress()["revision"])
-        self.assertIsNone(store.progress()["nextTopic"])
-        self.assertEqual(len(store.lessons), len(store.progress()["attempts"]))
-
-    def test_failed_attempt_does_not_complete_topic(self):
-        store = self.init_store()
-        lesson = next(iter(store.lessons.values()))
-        required = lesson["assessment"]["requiredConcepts"]
-        self.save_attempt(store, result="needs_support", correctConcepts=required[:1],
-                          missingConcepts=required[1:])
-        progress = store.progress()
-        self.assertEqual("in_progress", progress["topics"][0]["status"])
-        self.assertEqual("atlas-overview", progress["nextTopic"])
-        with contextlib.closing(store.connect()) as connection:
-            self.assertEqual(0, connection.execute("SELECT COUNT(*) FROM reviews").fetchone()[0])
-
-    def test_invalid_rubric_and_shown_solution_cannot_demonstrate(self):
-        store = self.init_store()
-        cases = ({"missingConcepts": ["invented concept"]},
-                 {"assistance": "solution_shown"},
-                 {"misconceptions": ["Material contradiction"]},
-                 {"question": "An easier question"},
-                 {"correctConcepts": []},
-                 {"sourcePaths": ["..\\outside.md"]},
-                 {"sourcePaths": ["docs/projects/missing.md"]})
-        for changes in cases:
-            with self.assertRaises(ValueError):
-                store.write("record-attempt", self.attempt(store, **changes))
-        self.assertEqual(0, store.progress()["revision"])
-        self.assertEqual([], store.progress()["attempts"])
 
     def test_unknown_topic_and_unexpected_fields_fail(self):
         store = self.init_store()
-        payload = self.attempt(store)
-        payload["topicId"] = "invented"
-        with self.assertRaisesRegex(ValueError, "Unknown topic"):
-            store.write("record-attempt", payload)
-        payload = self.attempt(store)
-        payload["score"] = 100
+        with self.assertRaisesRegex(ValueError, "Unknown currentTopicId"):
+            self.save_summary(store, currentTopicId="invented")
         with self.assertRaisesRegex(ValueError, "exactly"):
-            store.write("record-attempt", payload)
+            self.save_summary(store, score=100)
+        with self.assertRaisesRegex(ValueError, "Unknown write action"):
+            store.write("record-coverage", {})
+        self.assertEqual(0, store.progress()["revision"])
 
     def test_stale_writes_and_idempotent_retries(self):
         store = self.init_store()
-        payload = self.attempt(store)
-        result = store.write("record-attempt", payload)
-        self.assertEqual(1, result["revision"])
-        retry = store.write("record-attempt", payload)
+        payload = self.save_summary(store)
+        retry = store.write("save-session", payload)
         self.assertTrue(retry["replayed"])
         self.assertEqual(1, store.progress()["revision"])
-        conflict = dict(payload, answer="different")
         with self.assertRaisesRegex(ValueError, "different content"):
-            store.write("record-attempt", conflict)
-        stale = dict(payload, id="other")
+            store.write("save-session", dict(payload, summary="different"))
         with self.assertRaisesRegex(ValueError, "Stale revision"):
-            store.write("record-attempt", stale)
-
-    def test_review_stages_and_failed_review(self):
-        store = self.init_store()
-        self.save_attempt(store)
-        for stage, days in ((1, 3), (2, 7), (2, 7)):
-            self.save_attempt(store, kind="review")
-            with contextlib.closing(store.connect()) as connection:
-                review = connection.execute("SELECT * FROM reviews").fetchone()
-                self.assertEqual(stage, review["stage"])
-                self.assertEqual((date.today() + timedelta(days=days)).isoformat(), review["due_date"])
-        required = next(iter(store.lessons.values()))["assessment"]["requiredConcepts"]
-        self.save_attempt(store, kind="review", result="needs_support",
-                          correctConcepts=[], missingConcepts=required)
-        with contextlib.closing(store.connect()) as connection:
-            self.assertEqual(0, connection.execute("SELECT stage FROM reviews").fetchone()[0])
-        self.assertEqual("needs_revisit", store.progress()["topics"][0]["status"])
-
-    def test_review_without_first_demonstration_fails(self):
-        store = self.init_store()
-        with self.assertRaisesRegex(ValueError, "earlier demonstrated"):
-            self.save_attempt(store, kind="review")
-        self.assertEqual(0, store.progress()["revision"])
-
-    def test_due_review_reads_do_not_reschedule(self):
-        store = self.init_store()
-        self.save_attempt(store)
-        due = (date.today() - timedelta(days=1)).isoformat()
-        with contextlib.closing(store.connect()) as connection, connection:
-            connection.execute("UPDATE reviews SET due_date = ?", (due,))
-        first = store.progress()
-        second = store.progress()
-        self.assertEqual(first, second)
-        self.assertEqual(due, first["dueReviews"][0]["due_date"])
-
-    def test_curriculum_change_preserves_evidence_and_blocks_dependents(self):
-        store = self.init_store()
-        for topic in list(store.lessons)[:3]:
-            store.write("record-attempt", self.attempt(store, topic))
-        changed = copy.deepcopy(store.curriculum)
-        changed["lessons"][0]["objectives"].append("New required understanding")
-        path = self.atlas / "changed-curriculum.json"
-        path.write_text(json.dumps(changed))
-        newer = database.Store(self.atlas, path)
-        progress = newer.progress()
-        self.assertEqual(["atlas-overview"], progress["freshnessUncertain"])
-        self.assertEqual(3, len(progress["attempts"]))
-        self.assertEqual("atlas-overview", progress["nextTopic"])
-        self.assertFalse(newer.eligible(
-            {item["id"]: item for item in progress["topics"]},
-            newer.lessons["technician-workflow"]))
+            store.write("save-session", dict(payload, id="other"))
 
     def test_sessions_preserve_questions_and_read_back(self):
         store = self.init_store()
         payload = {"id": "session-1", "expectedRevision": 0,
                    "currentTopicId": "atlas-overview", "summary": "Learned purpose",
-                   "nextStep": "Teach back",
+                   "nextStep": "Ask a follow-up",
                    "openQuestions": [{"id": "q1", "topicId": None,
                                       "question": "How does offline sync work?", "status": "open"}]}
         result = store.write("save-session", payload)
@@ -802,23 +514,31 @@ class StoreTests(Fixture):
         with contextlib.closing(store.connect()) as writer:
             writer.execute("BEGIN IMMEDIATE")
             with self.assertRaisesRegex(sqlite3.OperationalError, "locked"):
-                self.save_attempt(store)
+                self.save_summary(store)
             writer.rollback()
         self.assertEqual(0, store.progress()["revision"])
-        self.assertEqual([], store.progress()["attempts"])
+        self.assertEqual([], store.progress()["sessions"])
 
-    def test_attempt_topic_review_and_revision_roll_back_together(self):
+    def test_session_and_revision_roll_back_together(self):
         store = self.init_store()
         with contextlib.closing(store.connect()) as connection, connection:
             connection.execute(
-                "CREATE TRIGGER reject_review BEFORE INSERT ON reviews "
-                "BEGIN SELECT RAISE(ABORT, 'fixture review failure'); END")
-        with self.assertRaisesRegex(sqlite3.IntegrityError, "fixture review failure"):
-            self.save_attempt(store)
+                "CREATE TRIGGER reject_revision BEFORE UPDATE ON learner "
+                "BEGIN SELECT RAISE(ABORT, 'fixture revision failure'); END")
+        with self.assertRaisesRegex(sqlite3.IntegrityError, "fixture revision failure"):
+            self.save_summary(store)
         progress = store.progress()
         self.assertEqual(0, progress["revision"])
-        self.assertEqual([], progress["attempts"])
-        self.assertEqual([], progress["topics"])
+        self.assertEqual([], progress["sessions"])
+
+    def test_database_from_an_older_version_still_works(self):
+        store = self.init_store()
+        with contextlib.closing(sqlite3.connect(store.path)) as connection, connection:
+            connection.executescript(
+                "CREATE TABLE topics (id TEXT PRIMARY KEY, status TEXT);"
+                "CREATE TABLE attempts (id TEXT PRIMARY KEY, payload TEXT);")
+        self.save_summary(store)
+        self.assertEqual(1, store.progress()["revision"])
 
     def test_existing_database_cannot_be_reinitialized(self):
         store = self.init_store()
@@ -828,32 +548,38 @@ class StoreTests(Fixture):
         self.assertEqual(before, store.path.read_bytes())
 
     def test_cli_errors_are_json_and_nonzero(self):
-        store = self.init_store()
-        with patch("sys.argv", ["onboarding.py", "--atlas", str(self.atlas), "record-attempt"]), \
-                patch("sys.stdin", io.StringIO("{broken")), \
-                contextlib.redirect_stderr(io.StringIO()) as stderr:
-            # Source CLI resolves its curriculum beside the source script. Use installed CLI below.
-            with patch.object(database, "Store", return_value=store):
-                self.assertEqual(1, database.main())
-        self.assertFalse(json.loads(stderr.getvalue())["saved"])
+        command = self.command()
+        failed = subprocess.run(command + ["save-session"], input="{broken",
+                                capture_output=True, text=True)
+        self.assertEqual(1, failed.returncode)
+        self.assertFalse(json.loads(failed.stderr)["saved"])
 
     def test_installed_cli_saves_stdin_and_resumes(self):
-        self.install()
-        command = [sys_executable(), str(self.atlas / ".atlas-onboarding" / "onboarding.py"),
-                   "--atlas", str(self.atlas)]
+        command = self.command()
         initialized = subprocess.run(command + ["init", "--consent"],
                                      capture_output=True, text=True)
         self.assertEqual(0, initialized.returncode, initialized.stderr)
-        payload = self.attempt(self.store(), answer="Learner's answer: $(not a command)\n'@\n\"quoted\"")
-        saved = subprocess.run(command + ["record-attempt"], input=json.dumps(payload),
+        payload = {"id": "s1", "expectedRevision": 0, "currentTopicId": "atlas-overview",
+                   "summary": "Learner's note: $(not a command)\n'@\n\"quoted\"",
+                   "nextStep": "Ask more", "openQuestions": []}
+        saved = subprocess.run(command + ["save-session"], input=json.dumps(payload),
                                capture_output=True, text=True)
         self.assertEqual(0, saved.returncode, saved.stderr)
         self.assertTrue(json.loads(saved.stdout)["saved"])
-        resumed = subprocess.run(command + ["next-topic"], capture_output=True, text=True)
+        resumed = subprocess.run(command + ["get-progress"], capture_output=True, text=True)
         self.assertEqual(0, resumed.returncode, resumed.stderr)
         progress = json.loads(resumed.stdout)
-        self.assertEqual(payload["answer"], progress["attempts"][0]["answer"])
-        self.assertEqual("atlas-startup-navigation", progress["nextTopic"])
+        self.assertEqual(payload["summary"], progress["sessions"][0]["summary"])
+        self.assertEqual(1, progress["revision"])
+
+    def test_progress_lists_saved_sessions_for_revisit(self):
+        store = self.init_store()
+        self.assertEqual([], store.progress()["sessions"])
+        for index in (1, 2):
+            self.save_summary(store, id=f"s{index}", summary=f"Discussed question {index}")
+        sessions = store.progress()["sessions"]
+        self.assertEqual(["s1", "s2"], [item["id"] for item in sessions])
+        self.assertEqual("s2", store.progress()["lastSession"]["id"])
 
 
 if __name__ == "__main__":

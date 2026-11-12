@@ -2,11 +2,11 @@
 """Build explorer/js/data.js from the two files people edit.
 
   curriculum.json        the topic list the ATLAS Tutor agent labels questions with (ids, order, sources,
-                         objectives, prerequisites, starter questions)
+                         objectives, starter questions)
   content/lessons.json   how the Explorer presents it (hook, key points, diagrams, quiz, videos)
 
 data.js is GENERATED. Do not edit it by hand. Everything the two sides share (lesson ids, source
-documents and sections, objectives, starter questions, prerequisites) is
+documents and sections, objectives, starter questions) is
 copied from curriculum.json, so the agent and the Explorer cannot drift apart.
 
   python scripts/build_explorer.py           write explorer/js/data.js
@@ -69,16 +69,13 @@ def build():
                 secs.setdefault(source["path"], [])
                 secs[source["path"]] = uniq(secs[source["path"]] + source.get("sections", []))
         src = uniq(src + item.get("extraSrc", []))
-        before = uniq(p for part in parts for p in part["prerequisites"])
-        prereq = uniq(covered[p] for p in before if covered[p] != item["id"])
         starters = uniq(part["starterQuestion"] for part in parts)
         prompts = uniq(starters + item.get("prompts", []))[:5]
-        lesson = {"id": item["id"], "phase": con["phaseOfModule"][parts[0]["moduleId"]],
-                  "module": parts[0]["moduleId"], "topics": topics}
+        lesson = {"id": item["id"], "phase": con["phaseOfModule"][parts[0]["moduleId"]]}
         lesson.update({k: v for k, v in item.items()
                        if k not in ("id", "covers", "extraSrc", "prompts", "phase")})
         lesson.update({
-            "src": src, "secs": secs, "prereq": prereq,
+            "src": src, "secs": secs,
             "goals": uniq(g for part in parts for g in part["objectives"]),
             "prompts": prompts})
         out_lessons.append(lesson)

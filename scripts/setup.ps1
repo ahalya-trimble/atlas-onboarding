@@ -21,7 +21,9 @@ $marker = 'atlas-onboarding-managed'
 function Get-Exclude($atlas) { (& git -C $atlas rev-parse --path-format=absolute --git-path info/exclude).Trim() }
 function Remove-CursorRule {
   $rule = Join-Path $Atlas $ruleRel
-  if ((Test-Path $rule) -and (Select-String -Path $rule -Pattern $marker -Quiet)) { Remove-Item $rule -Force }
+  $tracked = & git -C $Atlas ls-files -- $ruleRel
+  if ($tracked) { Write-Host 'Tracked Cursor rule left in place.' -ForegroundColor Yellow }
+  elseif ((Test-Path $rule) -and (Select-String -Path $rule -Pattern $marker -Quiet)) { Remove-Item $rule -Force }
   $ex = Get-Exclude $Atlas
   if (Test-Path $ex) {
     $t = [IO.File]::ReadAllText($ex)
@@ -49,16 +51,44 @@ if (-not (Test-Path "$Atlas\Atlas.sln")) { Fail "No Atlas.sln in '$Atlas'. Give 
 $dest = Join-Path $Atlas '.atlas-onboarding'
 $explorerDest = Join-Path $dest 'explorer'
 $manifest = Join-Path $dest 'manifest.json'
+$markerFile = Join-Path $explorerDest '.atlas-explorer-managed'
+function Test-ManagedExplorer {
+  if ((Test-Path $markerFile) -and (Select-String -Path $markerFile -Pattern $marker -Quiet)) { return $true }
+  # Copies installed before the marker still belong to this setup if they are our server.
+  $server = Join-Path $explorerDest 'server.py'
+  (Test-Path $server) -and (Select-String -Path $server -Pattern 'server_version = "AtlasExplorer"' -Quiet)
+}
 
-# Stop a previously started Atlas Explorer server so the new files and server code are used.
+# Stop only the Explorer server started for this checkout. Compare full resolved paths, not substrings.
+$atlasFull = (Resolve-Path -LiteralPath $Atlas).Path.TrimEnd('\')
+$serverFull = Join-Path $explorerDest 'server.py'
+function Test-ThisCheckout([string]$cmd) {
+  if ($cmd -notmatch '(?i)(^|[\s"])([A-Za-z]:\\[^"\s]*server\.py|server\.py)(\s|"|$)') { return $false }
+  $atlasArg = $null
+  if ($cmd -match '(?i)--atlas(?:\s+|=)(?:"([^"]+)"|(\S+))') { $atlasArg = if ($Matches[1]) { $Matches[1] } else { $Matches[2] } }
+  if ($atlasArg) {
+    try { return (Resolve-Path -LiteralPath $atlasArg -ErrorAction Stop).Path.TrimEnd('\') -eq $atlasFull } catch { return $false }
+  }
+  if ($cmd -match '(?i)"([^"]*server\.py)"|([A-Za-z]:\\[^\s"]*server\.py)') {
+    $script = if ($Matches[1]) { $Matches[1] } else { $Matches[2] }
+    try { return (Resolve-Path -LiteralPath $script -ErrorAction Stop).Path -eq (Resolve-Path -LiteralPath $serverFull -ErrorAction Stop).Path } catch { return $false }
+  }
+  return $false
+}
 Get-CimInstance Win32_Process -Filter "Name like 'python%'" -ErrorAction SilentlyContinue |
-  Where-Object { $_.CommandLine -match 'server\.py' -and $_.CommandLine -match [regex]::Escape('.atlas-onboarding') } |
+  Where-Object { Test-ThisCheckout $_.CommandLine } |
   ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
 if ($Remove) {
   Step 3 'Removing the tutor'
   if (Test-Path $manifest) { & python "$here\scripts\install.py" remove --atlas $Atlas; if ($LASTEXITCODE) { Fail 'Installer refused removal (see message above).' } }
-  if (Test-Path $explorerDest) { Remove-Item $explorerDest -Recurse -Force }
-  Remove-Item (Join-Path $dest 'Open Atlas Explorer.bat') -Force -ErrorAction SilentlyContinue
+  elseif (Test-Path $dest) { Write-Host 'No installation manifest; tutor files were not removed.' -ForegroundColor Yellow }
+  if (Test-ManagedExplorer) {
+    Remove-Item $explorerDest -Recurse -Force
+    $bat = Join-Path $dest 'Open Atlas Explorer.bat'
+    if ((Test-Path $bat) -and (Select-String -Path $bat -Pattern 'Atlas Explorer' -Quiet)) { Remove-Item $bat -Force }
+  } elseif (Test-Path $explorerDest) {
+    Write-Host "Explorer folder is not managed by this installer; left in place: $explorerDest" -ForegroundColor Yellow
+  }
   Remove-CursorRule
   Write-Host 'Removed. Your learner progress was not touched.' -ForegroundColor Green
   exit 0
@@ -70,6 +100,9 @@ $action = if (Test-Path $manifest) { 'update' } else { 'install' }
 if ($LASTEXITCODE) { Fail 'The installer stopped. Read the message above; nothing was left half-installed.' }
 
 Step 4 'Installing the visual guide (Atlas Explorer)'
+if ((Test-Path $explorerDest) -and -not (Test-ManagedExplorer)) {
+  Fail "Atlas Explorer folder already exists and was not installed by this setup. Move '$explorerDest' aside and run setup again."
+}
 $keep = Join-Path $env:TEMP ('atlas-shots-' + [guid]::NewGuid())
 $shots = Join-Path $explorerDest 'assets\screens'
 if (Test-Path $shots) { Copy-Item $shots $keep -Recurse -Force }   # keep screenshots added only on the Atlas side
@@ -77,6 +110,7 @@ if (Test-Path $explorerDest) { Remove-Item $explorerDest -Recurse -Force }
 New-Item -ItemType Directory -Force $explorerDest | Out-Null
 $src = Join-Path $here 'explorer'
 Copy-Item "$src\*" $explorerDest -Recurse -Force
+Set-Content -Encoding ASCII -Path $markerFile -Value $marker
 if (Test-Path $keep) { Copy-Item "$keep\*" $shots -Recurse -Force; Remove-Item $keep -Recurse -Force }
 $bat = Join-Path $dest 'Open Atlas Explorer.bat'
 "@echo off`r`ntitle Atlas Explorer (close this window to stop)`r`ncd /d `"%~dp0explorer`"`r`necho Atlas Explorer: http://localhost:8765  (local only, read-only). Close this window to stop.`r`npython server.py --open --atlas `"%~dp0..`"`r`nif errorlevel 1 pause" | Set-Content -Encoding ASCII $bat
