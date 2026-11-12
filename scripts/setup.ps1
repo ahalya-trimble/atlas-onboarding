@@ -59,11 +59,24 @@ function Test-ManagedExplorer {
   (Test-Path $server) -and (Select-String -Path $server -Pattern 'server_version = "AtlasExplorer"' -Quiet)
 }
 
-# Stop only the Explorer server started for this checkout, so another Atlas folder keeps running.
-$atlasEsc = [regex]::Escape($Atlas)
-$explorerEsc = [regex]::Escape($explorerDest)
+# Stop only the Explorer server started for this checkout. Compare full resolved paths, not substrings.
+$atlasFull = (Resolve-Path -LiteralPath $Atlas).Path.TrimEnd('\')
+$serverFull = Join-Path $explorerDest 'server.py'
+function Test-ThisCheckout([string]$cmd) {
+  if ($cmd -notmatch '(?i)(^|[\s"])([A-Za-z]:\\[^"\s]*server\.py|server\.py)(\s|"|$)') { return $false }
+  $atlasArg = $null
+  if ($cmd -match '(?i)--atlas(?:\s+|=)(?:"([^"]+)"|(\S+))') { $atlasArg = if ($Matches[1]) { $Matches[1] } else { $Matches[2] } }
+  if ($atlasArg) {
+    try { return (Resolve-Path -LiteralPath $atlasArg -ErrorAction Stop).Path.TrimEnd('\') -eq $atlasFull } catch { return $false }
+  }
+  if ($cmd -match '(?i)"([^"]*server\.py)"|([A-Za-z]:\\[^\s"]*server\.py)') {
+    $script = if ($Matches[1]) { $Matches[1] } else { $Matches[2] }
+    try { return (Resolve-Path -LiteralPath $script -ErrorAction Stop).Path -eq (Resolve-Path -LiteralPath $serverFull -ErrorAction Stop).Path } catch { return $false }
+  }
+  return $false
+}
 Get-CimInstance Win32_Process -Filter "Name like 'python%'" -ErrorAction SilentlyContinue |
-  Where-Object { $_.CommandLine -match 'server\.py' -and ($_.CommandLine -match $atlasEsc -or $_.CommandLine -match $explorerEsc) } |
+  Where-Object { Test-ThisCheckout $_.CommandLine } |
   ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
 if ($Remove) {
   Step 3 'Removing the tutor'

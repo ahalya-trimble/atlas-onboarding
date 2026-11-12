@@ -325,7 +325,9 @@
     LIVE = true;
     if (!h || !h.atlas) return;
     checkout = h.atlas;
-    if (localStorage.getItem(storageKey())) { S = readState(storageKey()); migrate(); return; }
+    let stored = null;
+    try { stored = localStorage.getItem(storageKey()); } catch (e) { stored = null; }
+    if (stored) { S = readState(storageKey()); migrate(); return; }
     const legacy = readState(KEY);
     const claimed = legacy.checkout && legacy.checkout !== checkout;
     const legacyWork = legacy.profile || legacy.skipProfile || legacy.xp || Object.keys(legacy.done || {}).length;
@@ -346,20 +348,33 @@
     S = Object.assign(emptyState(), next); migrate();
     try { localStorage.setItem(storageKey(), JSON.stringify(S)); } catch (e) {}
   }
+  const sameCheckout = body => !!(body && body.atlas && checkout && body.atlas === checkout);
   function pushProgress() {
-    if (!LIVE) return; clearTimeout(pushT);
-    pushT = setTimeout(() => fetch("/api/progress", { method: "POST", headers: { "X-Requested-With": "atlas-explorer", "Content-Type": "application/json" }, body: JSON.stringify(S), cache: "no-store" }).then(r => {
-      if (r.status === 409) return r.json().then(body => { if (body.explorer) applyState(body.explorer); });
-      if (!r.ok) throw new Error(r.status);
-      syncWarned = false;
-    }).catch(() => { if (!syncWarned) { syncWarned = true; toast("Progress stayed in this browser. It was not saved to the file on this computer."); } }), 400);
+    if (!LIVE || !checkout) return; clearTimeout(pushT);
+    pushT = setTimeout(() => {
+      const sentAt = +S.updatedAt || 0, sentCheckout = checkout;
+      const payload = Object.assign({}, S, { checkout: sentCheckout });
+      fetch("/api/progress", { method: "POST", headers: { "X-Requested-With": "atlas-explorer", "Content-Type": "application/json" }, body: JSON.stringify(payload), cache: "no-store" }).then(r => {
+        if (r.status === 409) return r.json().then(body => {
+          if (!sameCheckout(body) || body.atlas !== sentCheckout) return;
+          const remote = body.explorer, remoteT = remote ? (+remote.updatedAt || 0) : 0, nowT = +S.updatedAt || 0;
+          if (remote && remoteT > nowT) { applyState(remote); route(); return; }
+          if (nowT > sentAt || nowT > remoteT) pushProgress();
+        });
+        if (!r.ok) throw new Error(r.status);
+        syncWarned = false;
+        if ((+S.updatedAt || 0) > sentAt) pushProgress();
+      }).catch(() => { if (!syncWarned) { syncWarned = true; toast("Progress stayed in this browser. It was not saved to the file on this computer."); } });
+    }, 400);
   }
   function loadProgress() {
     if (!LIVE) return Promise.resolve();
     return api("/api/progress").then(r => {
+      if (!sameCheckout(r)) return;
       const disk = r.explorer, diskT = disk ? (+disk.updatedAt || 0) : 0, localT = +S.updatedAt || 0;
-      if (disk && (diskT > localT || (!localWork() && !localT))) applyState(disk);
-      else if (localWork() || localT > diskT) pushProgress();
+      if (disk && !diskT && !localT) { applyState(disk); return; }
+      if (disk && diskT > localT) applyState(disk);
+      else if ((!disk && localWork()) || localT > diskT) pushProgress();
     }).catch(() => toast("Could not read progress saved on this computer."));
   }
 

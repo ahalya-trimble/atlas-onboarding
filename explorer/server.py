@@ -23,6 +23,7 @@ import os
 import re
 import sys
 import tempfile
+import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, unquote, urlparse
@@ -33,10 +34,9 @@ ALLOWED_FILES = {"AGENTS.md", "README.md"}
 ALLOWED_EXT = {".md", ".txt"}
 MAX_BYTES = 1_000_000
 DENY_NAME = re.compile(r"(\.env|appsettings|\.pfx|\.pem|\.key|\.p12|id_rsa|\.snk|\.publishsettings)", re.I)
-REDACT = re.compile(
-    r"(?i)((?:^|[^A-Za-z0-9_])[\"']?(?:password|pwd|secret|api[ _-]?key|accountkey|"
-    r"sharedaccesskey|client[_-]?secret|token)[\"']?\s*[=:]\s*)"
-    r"([\"'][^\"'\r\n]{1,200}[\"']|[^\s;\"'`,)]{3,})")
+SECRET_KEY = re.compile(
+    r"(?i)(?:^|(?<=[^A-Za-z0-9_]))[\"']?(?:password|pwd|secret|api[ _-]?key|accountkey|"
+    r"sharedaccesskey|client[_-]?secret|token)[\"']?(?=\s*[=:])")
 STATIC_EXT = {".html": "text/html; charset=utf-8", ".css": "text/css; charset=utf-8",
               ".js": "text/javascript; charset=utf-8", ".json": "application/json",
               ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
@@ -52,15 +52,48 @@ STATE = None          # .atlas-onboarding/state
 PORT = 8765
 
 
+def _secret_value_end(text, start):
+    if start >= len(text):
+        return None
+    quote = text[start]
+    if quote in "\"'":
+        index = start + 1
+        while index < len(text):
+            if text[index] == "\\" and index + 1 < len(text):
+                index += 2
+                continue
+            if text[index] == quote:
+                return index + 1
+            if text[index] in "\r\n":
+                return None
+            index += 1
+        return None
+    index = start
+    while index < len(text) and text[index] not in " \t\r\n;\"'`,)":
+        index += 1
+    return index if index - start >= 3 else None
+
+
 def redact(text):
-    def hide(match):
-        value = match.group(2)
-        if len(value) >= 2 and value[0] in "\"'" and value[-1] == value[0]:
-            value = value[0] + "[redacted]" + value[-1]
-        else:
-            value = "[redacted]"
-        return match.group(1) + value
-    return REDACT.sub(hide, text)
+    parts = []
+    cursor = 0
+    for match in SECRET_KEY.finditer(text):
+        index = match.end()
+        while index < len(text) and text[index] in " \t":
+            index += 1
+        if index >= len(text) or text[index] not in "=:":
+            continue
+        index += 1
+        while index < len(text) and text[index] in " \t":
+            index += 1
+        end = _secret_value_end(text, index)
+        if end is None or index < cursor:
+            continue
+        parts.append(text[cursor:index])
+        parts.append((text[index] + "[redacted]" + text[index]) if text[index] in "\"'" else "[redacted]")
+        cursor = end
+    parts.append(text[cursor:])
+    return "".join(parts)
 
 
 def sha(data):
@@ -193,24 +226,66 @@ def load_progress():
         return None
 
 
-def save_progress(data):
-    STATE.mkdir(parents=True, exist_ok=True)
-    target = progress_path()
-    if target.is_symlink():
-        raise ValueError("refusing to write through a link")
-    current = load_progress()
-    if current and int(current.get("updatedAt") or 0) > int(data.get("updatedAt") or 0):
-        raise ValueError("stale progress")
-    fd, name = tempfile.mkstemp(prefix="explorer-progress-", suffix=".tmp", dir=STATE)
-    tmp = Path(name)
+_progress_guard = threading.Lock()
+
+
+class _StateLock:
+    """One lock file per checkout, shared by every thread and process that writes it."""
+
+    def __init__(self, folder):
+        self.folder = folder
+        self.handle = None
+
+    def __enter__(self):
+        self.folder.mkdir(parents=True, exist_ok=True)
+        self.handle = open(self.folder / ".progress.lock", "a+b")
+        if os.name == "nt":
+            import msvcrt
+            msvcrt.locking(self.handle.fileno(), msvcrt.LK_LOCK, 1)
+        else:
+            import fcntl
+            fcntl.flock(self.handle.fileno(), fcntl.LOCK_EX)
+        return self
+
+    def __exit__(self, *_exc):
+        try:
+            if os.name == "nt":
+                import msvcrt
+                msvcrt.locking(self.handle.fileno(), msvcrt.LK_UNLCK, 1)
+            else:
+                import fcntl
+                fcntl.flock(self.handle.fileno(), fcntl.LOCK_UN)
+        finally:
+            self.handle.close()
+
+
+def same_checkout(value):
+    if not isinstance(value, str) or not value.strip() or ATLAS is None:
+        return False
     try:
-        with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as handle:
-            handle.write(json.dumps(data, indent=1) + "\n")
-        os.replace(tmp, target)
-    except Exception:
-        if tmp.exists():
-            tmp.unlink()
-        raise
+        return Path(value).resolve() == ATLAS.resolve()
+    except OSError:
+        return False
+
+
+def save_progress(data):
+    with _progress_guard, _StateLock(STATE):
+        target = progress_path()
+        if target.is_symlink():
+            raise ValueError("refusing to write through a link")
+        current = load_progress()
+        if current and int(current.get("updatedAt") or 0) > int(data.get("updatedAt") or 0):
+            raise ValueError("stale progress")
+        fd, name = tempfile.mkstemp(prefix="explorer-progress-", suffix=".tmp", dir=STATE)
+        tmp = Path(name)
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as handle:
+                handle.write(json.dumps(data, indent=1) + "\n")
+            os.replace(tmp, target)
+        except Exception:
+            if tmp.exists():
+                tmp.unlink()
+            raise
 
 
 def tokens(s):
@@ -298,13 +373,16 @@ class Handler(BaseHTTPRequestHandler):
             n = min(int(self.headers.get("Content-Length") or 0), 65536)
             body = json.loads(self.rfile.read(n) or b"{}")
             if u.path == "/api/progress":
+                if not same_checkout(body.get("checkout")):
+                    return self._json({"error": "wrong checkout"}, 409)
                 try:
                     save_progress(clean_progress(body))
                 except ValueError as exc:
                     if str(exc) == "stale progress":
-                        return self._json({"error": "stale", "explorer": load_progress()}, 409)
+                        return self._json({"error": "stale", "atlas": str(ATLAS.resolve()),
+                                            "explorer": load_progress()}, 409)
                     raise
-                return self._json({"ok": True})
+                return self._json({"ok": True, "atlas": str(ATLAS.resolve())})
             paths = body.get("paths", [])
             if not isinstance(paths, list):
                 raise ValueError
@@ -354,7 +432,7 @@ class Handler(BaseHTTPRequestHandler):
                           "summary": plain(redact(first))[:300]}
             return self._json(out)
         if path == "/api/progress":
-            return self._json({"explorer": load_progress()})
+            return self._json({"atlas": str(ATLAS.resolve()), "explorer": load_progress()})
         if path == "/api/search":
             return self._json({"results": search(arg("q")[:200])})
         self._json({"error": "not found"}, 404)
