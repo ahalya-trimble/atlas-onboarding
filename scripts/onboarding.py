@@ -51,7 +51,7 @@ def exact_fields(payload, fields):
 
 
 class Store:
-    def __init__(self, atlas, curriculum=None):
+    def __init__(self, atlas, lessons_file=None):
         self.atlas = Path(atlas).resolve()
         if not (self.atlas / "Atlas.sln").is_file():
             raise ValueError("Target must be an Atlas checkout containing Atlas.sln")
@@ -59,12 +59,16 @@ class Store:
         if (self.path.is_symlink() or self.path.parent.is_symlink()
                 or not self.path.resolve().is_relative_to(self.atlas)):
             raise ValueError("Learner database must be a regular local path inside the Atlas checkout")
-        curriculum = curriculum or Path(__file__).resolve().parent / "curriculum.json"
-        data = json.loads(Path(curriculum).read_text(encoding="utf-8-sig"))
-        # The curriculum is only the list of topic labels a saved summary may use.
-        self.lessons = {lesson["id"]: lesson for lesson in data["lessons"]}
-        if len(self.lessons) != len(data["lessons"]):
-            raise ValueError("Duplicate curriculum lesson IDs")
+        lessons_file = lessons_file or Path(__file__).resolve().parent / "lessons.json"
+        data = json.loads(Path(lessons_file).read_text(encoding="utf-8-sig"))
+        # The lessons are only the list of topic labels a saved summary may use.
+        # Older lesson ids (aliases) stay valid so summaries saved earlier keep working.
+        self.lessons = {}
+        for lesson in data["lessons"]:
+            for name in [lesson["id"], *lesson.get("aliases", [])]:
+                if name in self.lessons:
+                    raise ValueError("Duplicate lesson IDs")
+                self.lessons[name] = lesson
 
     def connect(self):
         connection = sqlite3.connect(self.path.as_uri() + "?mode=rw", uri=True, timeout=5)

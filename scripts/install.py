@@ -13,13 +13,15 @@ ROOT = Path(__file__).resolve().parents[1]
 MANIFEST = Path(".atlas-onboarding") / "manifest.json"
 FILES = {
     ".atlas-onboarding/onboarding.py": ROOT / "scripts" / "onboarding.py",
-    ".atlas-onboarding/curriculum.json": ROOT / "curriculum.json",
+    ".atlas-onboarding/lessons.json": ROOT / "lessons.json",
     ".atlas-onboarding/tutor.md": ROOT / "tutor.md",
     ".atlas-onboarding/VERSION": ROOT / "VERSION",
     ".github/agents/atlas-onboarding-local.agent.md": ROOT / "atlas-onboarding-local.agent.md",
     ".github/skills/quiz/SKILL.md": ROOT / "skills" / "quiz" / "SKILL.md",
 }
 LEGACY_FILES = frozenset(FILES) - {".github/skills/quiz/SKILL.md"}
+# Earlier releases installed the lesson list as curriculum.json; an update replaces it with lessons.json.
+RENAMED = {".atlas-onboarding/curriculum.json": ".atlas-onboarding/lessons.json"}
 LEGACY_EXCLUDES = ("\n# BEGIN atlas-onboarding local add-on\n"
             "/.atlas-onboarding/\n"
             "/.github/agents/atlas-onboarding-local.agent.md\n"
@@ -78,10 +80,11 @@ def apply_install(atlas, action):
         manifest = json.loads(manifest_bytes)
         if (not isinstance(manifest, dict) or manifest.get("schemaVersion") != 1
                 or not isinstance(manifest.get("files"), dict)
-                or set(manifest["files"]) not in (set(FILES), LEGACY_FILES)):
+                or {RENAMED.get(name, name) for name in manifest["files"]} not in (set(FILES), LEGACY_FILES)):
             raise ValueError("Unknown or malformed installation manifest; refusing changes")
+    obsolete = [name for name in (manifest["files"] if installed else []) if name in RENAMED]
     snapshots = {manifest_path: manifest_bytes}
-    targets = manifest["files"] if action == "remove" else FILES
+    targets = manifest["files"] if action == "remove" else {**FILES, **dict.fromkeys(obsolete)}
     for relative in targets:
         path = safe_path(atlas, relative)
         content = None
@@ -102,7 +105,8 @@ def apply_install(atlas, action):
         raise ValueError("Refusing to edit a linked Git exclude file")
     snapshots[exclude] = exclude.read_bytes() if exclude.exists() else None
     old_exclude = snapshots[exclude] or b""
-    block = (LEGACY_EXCLUDES if installed and set(manifest["files"]) == LEGACY_FILES
+    block = (LEGACY_EXCLUDES
+             if installed and {RENAMED.get(name, name) for name in manifest["files"]} == LEGACY_FILES
              else EXCLUDES).encode()
     if installed and old_exclude.count(block) != 1:
         raise ValueError("Managed Git exclude block changed; reconcile before update/removal")
@@ -123,6 +127,7 @@ def apply_install(atlas, action):
         contents = {name: source.read_bytes() for name, source in FILES.items()}
         version = (ROOT / "VERSION").read_text(encoding="ascii").strip()
         updates.update({safe_path(atlas, name): content for name, content in contents.items()})
+        updates.update({safe_path(atlas, name): None for name in obsolete})
         new_manifest = {"schemaVersion": 1, "version": version,
                         "files": {name: digest(content) for name, content in contents.items()}}
         updates[manifest_path] = (json.dumps(new_manifest, indent=2) + "\n").encode()

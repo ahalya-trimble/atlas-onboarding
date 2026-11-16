@@ -27,9 +27,9 @@ Step-by-step instructions with troubleshooting: [GETTING-STARTED.md](./GETTING-S
 
 ## How it fits together
 
-- **One lesson list.** `curriculum.json` (lesson ids, order, source documents and sections,
-  objectives, starter questions) is shared. The Explorer's `data.js` is generated from it, so the
-  two cannot drift apart.
+- **One lesson file.** `lessons.json` holds every lesson once: its text, diagrams, quiz, and the Atlas
+  documents and sections it came from. The Explorer, the tutor and the update checker all read this
+  same file, so they cannot drift apart. There is no build step.
 - **Live documents.** Every lesson links to the real Atlas documents it came from, shows their
   current headings, and warns when a document changed after you last reviewed it.
 - **Shared progress.** The Explorer saves your role and progress in one local file. The tutor can
@@ -62,13 +62,13 @@ switching to another agent ends the tutor workflow.
 | `setup.bat`, `scripts/setup.ps1` | One-step install, update and removal |
 | `scripts/install.py` | Safe installer for the agent files (manifest, rollback, Git exclude) |
 | `scripts/onboarding.py` | Saves the tutor's session summaries in a local SQLite file |
-| `scripts/build_explorer.py` | Generates `explorer/js/data.js` from the two content files |
+| `scripts/sync_docs.py`, `sync/`, `AGENTS.md`, `.github/`, `.cursor/commands/` | Weekly pipeline that finds lessons made stale by changed Atlas docs; Copilot updates them, with a Cursor `/sync-lessons` fallback (see MAINTAINING.md) |
+| `scripts/open-explorer.bat` | The launcher installed as `Open Atlas Explorer.bat`; it pulls new lessons before starting |
 | `atlas-onboarding-local.agent.md`, `tutor.md`, `skills/quiz/SKILL.md` | The agent, its workflow and the quiz |
 | `cursor/atlas-onboarding.mdc` | The Cursor rule |
-| `curriculum.json` | Shared lesson list and source references |
-| `content/lessons.json` | How the Explorer presents each lesson (text, diagrams, quiz, videos) |
+| `lessons.json` | The single lesson file (edit this to change content) |
 | `explorer/` | The visual guide: `index.html`, `js/`, `css/`, `assets/`, and `server.py` |
-| `tests/` | Installer, summary store, tutor text and alignment tests |
+| `tests/` | Installer, summary store, tutor text, lesson file and update-checker tests |
 
 ### Which parts need Python?
 
@@ -77,8 +77,7 @@ switching to another agent ends the tutor workflow.
 | `setup.ps1` | The one-step install (needs PowerShell, included in Windows) | Install by hand |
 | `install.py` | Copying the agent files into Atlas safely | Copy the files yourself; you lose the safety checks |
 | `onboarding.py` | Saving the tutor's summaries (and Revisit my learnings) | Tutor still answers, but nothing is saved |
-| `explorer/server.py` | Opening real documents, live updates and saved progress in the guide | Guide still opens as a plain file with lessons and quizzes |
-| `build_explorer.py` | Maintainers only, after editing content | Not needed by learners |
+| `explorer/server.py` | Serving the guide, opening real documents, live updates and saved progress | The guide cannot load; start it with `Open Atlas Explorer.bat` |
 
 All scripts use only the Python standard library.
 
@@ -92,14 +91,14 @@ existing agents and product files are never changed.
 | `.github/agents/atlas-onboarding-local.agent.md` | The selectable ATLAS Tutor agent |
 | `.github/skills/quiz/SKILL.md` | The `/quiz` skill |
 | `.cursor/rules/atlas-onboarding.mdc` | The Cursor rule |
-| `.atlas-onboarding/` | CLI, curriculum, workflow, manifest, the Explorer copy and its launcher |
+| `.atlas-onboarding/` | CLI, lesson file, workflow, manifest, the Explorer copy and its launcher |
 | `.atlas-onboarding/state/` | Your Explorer progress and document-review baseline (created when used) |
 | `.onboarding/` | The tutor's saved summaries (created on first save) |
 
 `install.py` refuses tracked targets, unowned files, edited managed files, linked paths and
 concurrent installs, verifies what it writes, and rolls back on filesystem errors.
 
-Update: re-run `setup.bat` (it also stops any old Explorer server). Remove:
+Update: new lessons arrive by themselves whenever you open `Open Atlas Explorer.bat` (it pulls this repository and re-runs setup when something changed; Cursor does the same check in `@atlas-onboarding`). You can also re-run `setup.bat` (it also stops any old Explorer server). Remove:
 `.\setup.bat "<atlas>" -Remove`. Your saved learning data is never deleted. Add `-Shortcut` to create a
 desktop shortcut for the guide.
 
@@ -118,15 +117,13 @@ desktop shortcut for the guide.
 
 ## Maintaining the content
 
-Edit `curriculum.json` (shared structure) or `content/lessons.json` (presentation), then run:
+Edit `lessons.json` and run the tests (`python -m unittest discover -s tests`). The tests check that
+every lesson has what the guide needs (sources, quiz, glossary terms, screenshots). There is nothing to
+generate. Screenshots go in `explorer/assets/screens/` (names in that folder's README).
 
-```powershell
-python scripts\build_explorer.py
-```
+## Keeping lessons current
 
-It stops with a clear message if a lesson exists on one side only. Never edit `explorer/js/data.js`
-by hand; a test fails if it is out of date. Screenshots go in `explorer/assets/screens/` (names in
-that folder's README).
+Handled by the maintainers through a pipeline and reviewed pull requests, never on a learner's computer. Learners just `git pull`. See [MAINTAINING.md](./MAINTAINING.md).
 
 ## CLI reference
 

@@ -86,6 +86,7 @@ if ($Remove) {
     Remove-Item $explorerDest -Recurse -Force
     $bat = Join-Path $dest 'Open Atlas Explorer.bat'
     if ((Test-Path $bat) -and (Select-String -Path $bat -Pattern 'Atlas Explorer' -Quiet)) { Remove-Item $bat -Force }
+    Remove-Item (Join-Path $dest '.source-repo'), (Join-Path $dest 'update.log') -Force -ErrorAction SilentlyContinue
   } elseif (Test-Path $explorerDest) {
     Write-Host "Explorer folder is not managed by this installer; left in place: $explorerDest" -ForegroundColor Yellow
   }
@@ -111,9 +112,17 @@ New-Item -ItemType Directory -Force $explorerDest | Out-Null
 $src = Join-Path $here 'explorer'
 Copy-Item "$src\*" $explorerDest -Recurse -Force
 Set-Content -Encoding ASCII -Path $markerFile -Value $marker
-if (Test-Path $keep) { Copy-Item "$keep\*" $shots -Recurse -Force; Remove-Item $keep -Recurse -Force }
+if (Test-Path $keep) {   # put back only screenshots this package does not ship, so updated images always win
+  Get-ChildItem $keep -File | Where-Object { -not (Test-Path (Join-Path $shots $_.Name)) } | Copy-Item -Destination $shots
+  Remove-Item $keep -Recurse -Force
+}
 $bat = Join-Path $dest 'Open Atlas Explorer.bat'
-"@echo off`r`ntitle Atlas Explorer (close this window to stop)`r`ncd /d `"%~dp0explorer`"`r`necho Atlas Explorer: http://localhost:8765  (local only, read-only). Close this window to stop.`r`npython server.py --open --atlas `"%~dp0..`"`r`nif errorlevel 1 pause" | Set-Content -Encoding ASCII $bat
+Copy-Item (Join-Path $here 'scripts\open-explorer.bat') $bat -Force
+# Remember where this copy of atlas-onboarding lives, so the launcher can pull new lessons before it starts.
+# The file sits inside .atlas-onboarding/, which Git already excludes. ASCII only: batch files cannot read other characters.
+$sourceFile = Join-Path $dest '.source-repo'
+if ((Test-Path (Join-Path $here '.git')) -and ($here -cmatch '^[\x20-\x7E]+$')) { Set-Content -Encoding ASCII -Path $sourceFile -Value $here }
+else { Remove-Item $sourceFile -Force -ErrorAction SilentlyContinue; Write-Host 'Automatic lesson updates are off (this copy is not a git clone, or its path has special characters).' -ForegroundColor Yellow }
 
 if ($Shortcut) {
   $desk = [Environment]::GetFolderPath('Desktop')
@@ -142,4 +151,4 @@ Step 6 'Done'
 Write-Host "Agent  : open '$Atlas' in VS Code, Copilot Chat -> pick 'ATLAS Tutor' -> say: Hi (or ask a question)" -ForegroundColor Green
 Write-Host "Cursor : open the folder in Cursor, in chat type: @atlas-onboarding  Hi (or ask a question)" -ForegroundColor Green
 Write-Host "Visual : double-click '$bat'" -ForegroundColor Green
-Start-Process $bat
+if (-not $env:ATLAS_ONBOARDING_SILENT) { Start-Process $bat }

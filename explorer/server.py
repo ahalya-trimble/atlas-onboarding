@@ -442,8 +442,9 @@ class Handler(BaseHTTPRequestHandler):
         if "\x00" in rel or ".." in rel.replace("\\", "/").split("/"):
             return self._send(404, b"not found", "text/plain")
         try:
-            real = (HERE / rel).resolve(strict=True)
-            real.relative_to(HERE)
+            # lessons.json sits next to the explorer folder (repo root, or .atlas-onboarding when installed)
+            real = (HERE.parent / "lessons.json" if rel == "lessons.json" else HERE / rel).resolve(strict=True)
+            real.relative_to(HERE.parent if rel == "lessons.json" else HERE)
         except (OSError, ValueError):
             return self._send(404, b"not found", "text/plain")
         ctype = STATIC_EXT.get(real.suffix.lower())
