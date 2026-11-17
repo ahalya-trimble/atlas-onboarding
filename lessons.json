@@ -95,7 +95,7 @@
   "Service case": "The record of one repair visit for one instrument. Everything the tech does is saved against it.",
   "MTP": "External system Atlas calls to get sales + warranty info for a serial number.",
   "TWoD": "Trimble's Salesforce org. Master source of products, companies, users, bulletins, authorizations.",
-  "DWCR": "Warranty claim sent to MTP by EXTERNAL technicians. Completes the case on success.",
+  "DWCR": "Dealer warranty claim submitted to Salesforce through OData by EXTERNAL technicians; MTP supplies eligibility data. Completes the case on success.",
   "Service-Support": "A Salesforce Case that INTERNAL technicians raise to ask for repair help.",
   "OData Service": "Primary backend of the desktop app (ASP.NET Web API on IIS, route /odata).",
   "MongoDB (local)": "Windows service installed with Atlas. Local copy of server data so work is fast and possible offline.",
@@ -708,8 +708,8 @@
    ],
    "phase": "desktop",
    "title": "DWCR vs Service-Support",
-   "tag": "Two buttons, two destinations",
-   "hook": "Same case, two very different exits. Do not mix them up!",
+   "tag": "Two Salesforce workflows",
+   "hook": "One external warranty claim; one internal repair-assistance case.",
    "goals": [
     "Distinguish external warranty claims from internal repair-assistance requests",
     "Explain the documented claim gates and case-completion outcomes"
@@ -738,7 +738,7 @@
       ],
       [
        "Goes to",
-       "MTP (warranty claim service)",
+       "Salesforce (through OData; MTP supplies eligibility data)",
        "Salesforce / TWoD (Case)"
       ],
       [
@@ -788,12 +788,12 @@
       },
       {
        "k": "p",
-       "t": "POST WarrantyClaimDetails to MTP (access token)"
+       "t": "POST claim JSON to OData SubmitDwcrClaim; OData calls Salesforce"
       },
       {
        "k": "d",
-       "t": "MTP status == SUCCESS?",
-       "stop": "Show MTP messages or use MTP portal"
+       "t": "Salesforce response == success?",
+       "stop": "Show Salesforce/OData error or contact Trimble Intelligent Support"
       },
       {
        "k": "s",
@@ -804,9 +804,9 @@
    ],
    "shot": null,
    "points": [
-    "**DWCR** → claim into **MTP**, external technicians only, completes the case on success.",
+    "**DWCR** → OData submits a Salesforce dealer-warranty claim; MTP supplies eligibility data. External technicians only; success completes the case.",
     "**Service-Support** → Salesforce Case, internal users only, does NOT complete the case.",
-    "Neither goes through OData for the actual submit. Both need network."
+    "DWCR submits through OData; Service-Support has its own Salesforce flow. Both need network."
    ],
    "terms": [
     "DWCR",
@@ -894,7 +894,7 @@
    },
    "shot": "bcs",
    "points": [
-    "Calibrates **X/SX** instruments at **calibration sites**; for service providers only.",
+    "Calibrates **X/SX** at **calibration sites**; external service-provider technicians and internal Trimble users can use it when their company has a ServiceProviders record.",
     "A daily **BCS sync job** drives monitoring/calibration alerts in Atlas.",
     "**Level 3** notification can **block creating/opening service cases** (with documented exceptions). `CalibrationFailSafe` is the safety valve.",
     "Reminder (monitoring) ≠ blockage (Level 3). Read `bcs-notifications.md` for exact rules."
@@ -1954,7 +1954,7 @@
      {
       "i": "",
       "t": "Boundaries",
-      "d": "Local MongoDB, OData, eAtlas/shared SQL, or direct MTP for DWCR."
+      "d": "Local MongoDB, OData, eAtlas/shared SQL, or OData-to-Salesforce for DWCR (MTP supplies eligibility data)."
      },
      {
       "i": "",
