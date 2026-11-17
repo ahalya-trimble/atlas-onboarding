@@ -30,7 +30,7 @@ class Fixture(unittest.TestCase):
     def setUp(self):
         self.temporary = tempfile.TemporaryDirectory(prefix="atlas-onboarding-test-")
         self.addCleanup(self.temporary.cleanup)
-        self.atlas = Path(self.temporary.name)
+        self.atlas = Path(self.temporary.name).resolve()   # the installer resolves paths; so must the fixture
         (self.atlas / "Atlas.sln").write_text("test solution", encoding="ascii")
         subprocess.run(["git", "init", "-q", str(self.atlas)], check=True, capture_output=True)
         self.exclude = self.atlas / ".git" / "info" / "exclude"

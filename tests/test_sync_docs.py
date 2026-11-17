@@ -1,5 +1,7 @@
+import ctypes
 import importlib.util
 import json
+import os
 import subprocess
 import tempfile
 import unittest
@@ -43,6 +45,9 @@ class SyncTests(unittest.TestCase):
         self.doc = self.atlas / "docs" / "projects" / "a.md"
         self.doc.write_text(DOC, encoding="utf-8")
         self.baseline_file, self.report_file = Path(tmp.name) / "baseline.json", Path(tmp.name) / "report.md"
+        saved = (sync.BASELINE, sync.REPORT, sync.ROOT)
+        self.addCleanup(lambda: setattr(sync, "BASELINE", saved[0]) or setattr(sync, "REPORT", saved[1])
+                        or setattr(sync, "ROOT", saved[2]))
         sync.BASELINE, sync.REPORT = self.baseline_file, self.report_file
         sync.ROOT = Path(tmp.name)          # report path is printed relative to ROOT
         self.accept()
@@ -139,6 +144,23 @@ class SyncTests(unittest.TestCase):
         self.assertEqual(0, self.run_quiet(sync.cmd_accept, self.atlas, CURRICULUM, None, False, True))
         baseline = json.loads(self.baseline_file.read_text(encoding="utf-8"))
         self.assertIn("atlasBranch", baseline)
+
+    @unittest.skipUnless(os.name == "nt", "8.3 short names exist only on Windows")
+    def test_atlas_path_in_windows_short_form_is_accepted(self):
+        # GitHub runners hand out temp paths like C:\Users\RUNNER~1\...; the resolved path is the long one.
+        long_name = self.atlas.parent / "a_directory_with_a_long_name"
+        self.atlas.rename(long_name)
+        buffer = ctypes.create_unicode_buffer(260)
+        if not ctypes.windll.kernel32.GetShortPathNameW(str(long_name), buffer, 260) or buffer.value == str(long_name):
+            self.skipTest("this volume does not create short names")
+        short = Path(buffer.value)
+        self.assertNotEqual(str(short.resolve()), str(short))
+        self.assertEqual(0, self.run_quiet(sync.cmd_check, short, CURRICULUM))
+        self.assertEqual(0, self.run_quiet(sync.cmd_accept, short, CURRICULUM, None))
+
+    def test_report_path_outside_the_repository_does_not_crash(self):
+        elsewhere = Path(tempfile.gettempdir()) / "somewhere" / "report.md"
+        self.assertEqual(str(elsewhere), sync.shown(elsewhere))
 
     def test_check_without_baseline_asks_for_accept(self):
         self.baseline_file.unlink()

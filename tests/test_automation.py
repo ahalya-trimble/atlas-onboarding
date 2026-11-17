@@ -97,7 +97,7 @@ class LauncherTests(unittest.TestCase):
     def setUp(self):
         tmp = tempfile.TemporaryDirectory()
         self.addCleanup(tmp.cleanup)
-        base = Path(tmp.name)
+        base = Path(tmp.name).resolve()
         self.upstream, self.source = base / "upstream", base / "source"
         self.atlas = base / "atlas"
         self.home = self.atlas / ".atlas-onboarding"

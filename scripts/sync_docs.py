@@ -68,7 +68,19 @@ def split_sections(text):
     return sections
 
 
+def shown(path):
+    """A path for messages: relative to this repository when it is inside it, otherwise the full path
+    (another folder or another drive, where a relative path does not exist)."""
+    try:
+        return str(Path(path).resolve().relative_to(ROOT.resolve()))
+    except ValueError:
+        return str(path)
+
+
 def read_doc(atlas, rel):
+    # Compare fully resolved paths on both sides. A path given in Windows short form (RUNNER~1) or on another
+    # drive than this repository would otherwise never match its resolved counterpart.
+    atlas = Path(atlas).resolve()
     path = atlas / rel
     if not path.is_file() or path.is_symlink() or not path.resolve().is_relative_to(atlas):
         return None
@@ -130,6 +142,7 @@ def load_baseline():
 
 def compare(atlas, lessons_data, baseline):
     """Return findings: per lesson reasons, plus doc-level notes. Pure data, no printing."""
+    atlas = Path(atlas).resolve()
     sources = lesson_sources(lessons_data)
     cited = {path for items in sources.values() for path, _ in items}
     now = {path: read_doc(atlas, path) for path in cited}
@@ -202,6 +215,7 @@ def write_report(atlas, lessons, notes, uncovered, baseline):
 
 
 def cmd_check(atlas, lessons_data):
+    atlas = Path(atlas).resolve()
     baseline = load_baseline()
     if baseline is None:
         print("No baseline yet. If the lessons are currently correct, record one with:\n"
@@ -221,11 +235,12 @@ def cmd_check(atlas, lessons_data):
         print("  note:", note.replace("`", ""))
     for path in uncovered:
         print("  uncovered document:", path)
-    print(f"Report: {REPORT.relative_to(ROOT)}")
+    print(f"Report: {shown(REPORT)}")
     return 2 if lessons else 0
 
 
 def cmd_accept(atlas, lessons_data, only, drifted=False, allow_local=False):
+    atlas = Path(atlas).resolve()
     problem = None if allow_local else checkout_problem(atlas)
     if problem:
         print(f"Refusing to record a baseline: {problem}. "
