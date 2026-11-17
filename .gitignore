@@ -6,3 +6,5 @@ onboarding.db-*
 sync/drift-report.md
 /atlas/
 /issue-body.md
+sync/review-summary.md
+sync/pr-body.md
