@@ -1,0 +1,202 @@
+# Weekly lesson sync. Runs on GitHub, never on a laptop, and never breaks when a licence disappears.
+#
+#   1. Check out atlas-onboarding (its default branch) and shallow-clone the Atlas docs from Bitbucket
+#   2. scripts/sync_docs.py check   -> did ANY Atlas document change? New, renamed or deleted files, added,
+#                                      renamed or removed sections, any edited text, cited or not (no AI)
+#   3. Primary mode  - Copilot CLI: if COPILOT_GITHUB_TOKEN exists, Copilot inspects every changed item and
+#                      triages it (update a lesson / add a lesson / skip with a reason; see AGENTS.md). The workflow
+#                      guards (nothing but lessons.json may change, and "no lesson edit" is allowed), runs the tests,
+#                      moves the baseline for everything reviewed, and opens a pull request.
+#   4. Fallback mode - Cursor: if there is no token, or Copilot / the tests / the pull request did not succeed,
+#                      an issue is opened (or updated) listing what changed, with the instruction to run
+#                      /sync-lessons in Cursor (.cursor/commands/sync-lessons.md).
+#
+# Secrets: ATLAS_REPO_URL, BITBUCKET_READ_TOKEN (ATLAS_READ_TOKEN is accepted as the old name);
+#          COPILOT_GITHUB_TOKEN (optional, a user-owned fine-grained token with "Copilot Requests").
+# Variable: ATLAS_BRANCH (optional, e.g. main or release/2.x). Setup: MAINTAINING.md.
+name: Weekly lesson sync
+
+on:
+  schedule:
+    - cron: "30 3 * * 1"           # Mondays 03:30 UTC = 09:00 IST
+  workflow_dispatch:
+    inputs:
+      init_baseline:
+        description: "First run: record today's Atlas docs as the baseline (opens a pull request)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+concurrency:
+  group: weekly-lesson-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest         # use a self-hosted runner label if Bitbucket is only reachable inside the company network
+    timeout-minutes: 30
+    env:
+      GH_TOKEN: ${{ github.token }}
+      HAS_COPILOT: ${{ secrets.COPILOT_GITHUB_TOKEN != '' }}
+      PROMPT: >-
+        Follow AGENTS.md and MAINTAINING.md, task "sync lessons with changed Atlas documents".
+        The Atlas documents are in ./atlas (read only) and the drift report is sync/drift-report.md.
+        Any documentation change is drift, cited or not. For EVERY item in the report, open the changed file or
+        section in ./atlas and triage it: update the relevant existing lesson (including its sources: new, renamed
+        or moved sections and paths), or create a complete new lesson under the right phase, or skip it if it is
+        not relevant to onboarding (for example Document status edits or housekeeping) and say why.
+        Edit only lessons.json (leaving it unchanged is correct when every item is skipped). Then write
+        sync/review-summary.md with one line per report item: updated lesson, new lesson, or skipped and why.
+        You may run: python -m unittest discover -s tests -v
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Fetch Atlas documents (shallow, read-only, docs only)
+        env:
+          ATLAS_REPO_URL: ${{ secrets.ATLAS_REPO_URL }}
+          BITBUCKET_READ_TOKEN: ${{ secrets.BITBUCKET_READ_TOKEN || secrets.ATLAS_READ_TOKEN }}
+          ATLAS_BRANCH: ${{ vars.ATLAS_BRANCH }}
+        run: |
+          set -euo pipefail
+          branch_args=()
+          if [ -n "${ATLAS_BRANCH}" ]; then branch_args=(--branch "${ATLAS_BRANCH}"); fi
+          git -c "http.extraHeader=Authorization: Bearer ${BITBUCKET_READ_TOKEN}" \
+            clone --depth 1 --sparse "${branch_args[@]}" "${ATLAS_REPO_URL}" atlas
+          git -C atlas sparse-checkout set docs
+          echo "Atlas branch: $(git -C atlas rev-parse --abbrev-ref HEAD) @ $(git -C atlas rev-parse --short HEAD)"
+
+      # ---- first run: record the baseline from the REMOTE branch, via a pull request ----
+      - name: Record the baseline (first run)
+        id: init
+        if: github.event_name == 'workflow_dispatch' && inputs.init_baseline
+        run: python scripts/sync_docs.py --atlas atlas accept
+
+      - name: Open the baseline pull request
+        if: steps.init.outcome == 'success'
+        uses: peter-evans/create-pull-request@v7
+        with:
+          branch: bot/baseline
+          base: ${{ github.event.repository.default_branch }}
+          title: Record Atlas documentation baseline
+          commit-message: Record Atlas documentation baseline
+          body: "Records which version of the Atlas documents the current lessons match. Created by the weekly lesson sync."
+          add-paths: sync/baseline.json
+
+      # ---- normal run ----
+      - name: What changed in the Atlas documents?
+        id: drift
+        if: steps.init.outcome == 'skipped'
+        run: |
+          set +e
+          python scripts/sync_docs.py --atlas atlas check
+          echo "code=$?" >> "$GITHUB_OUTPUT"
+
+      - name: Stop on errors
+        if: steps.drift.outputs.code == '1'
+        run: echo "sync_docs.py could not run. Run this workflow once with init_baseline ticked." && exit 1
+
+      # ---- primary mode: Copilot CLI. A removed or expired licence only makes this step fail, never the workflow. ----
+      - uses: actions/setup-node@v4
+        if: steps.drift.outputs.code == '2' && env.HAS_COPILOT == 'true'
+        with:
+          node-version: "22"
+
+      - name: Update lessons with Copilot CLI
+        id: copilot
+        if: steps.drift.outputs.code == '2' && env.HAS_COPILOT == 'true'
+        continue-on-error: true
+        env:
+          COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}
+        run: |
+          npm install -g @github/copilot
+          copilot -p "$PROMPT" \
+            --allow-tool='read,write,shell(python -m unittest discover -s tests -v)' --no-ask-user
+
+      # The agent may change lessons.json and nothing else. Changing nothing is fine: every item may have been judged
+      # not relevant to onboarding. The tests must pass; then the baseline moves past EVERYTHING that was reviewed
+      # (cited or not, new and deleted files, items the agent skipped), so it is not reported again.
+      - name: Guard, test, move the baseline
+        id: verify
+        if: steps.copilot.outcome == 'success'
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          changed=$(git status --porcelain | awk '{print $2}' | sort)
+          if [ -n "$changed" ] && [ "$changed" != "lessons.json" ]; then
+            echo "Expected only lessons.json to change (or nothing), got:"; echo "$changed"; exit 1
+          fi
+          python -m unittest discover -s tests -v
+          python scripts/sync_docs.py --atlas atlas accept --drifted
+          {
+            cat sync/drift-report.md
+            echo
+            echo "## Agent review summary"
+            echo
+            if [ -s sync/review-summary.md ]; then cat sync/review-summary.md; else echo "The agent did not write a review summary."; fi
+            if [ -z "$changed" ]; then
+              echo
+              echo "No lesson edit was needed; this pull request only moves the baseline past the reviewed changes."
+            fi
+          } > sync/pr-body.md
+
+      - name: Open the pull request
+        id: pr
+        if: steps.verify.outcome == 'success'
+        continue-on-error: true
+        uses: peter-evans/create-pull-request@v7
+        with:
+          branch: bot/lesson-sync
+          base: ${{ github.event.repository.default_branch }}
+          title: Review Atlas documentation changes and update lessons
+          commit-message: Review Atlas documentation changes and update lessons
+          body-path: sync/pr-body.md
+          labels: content-drift
+          add-paths: |
+            lessons.json
+            sync/baseline.json
+          # Pull requests opened with the default token do not start other workflows (such as CI).
+          # To run CI on them, pass a GitHub App token or a fine-grained token: token: ${{ secrets.BOT_PR_TOKEN }}
+
+      # ---- fallback mode: Cursor. Anything above that did not end in a pull request lands here. ----
+      - name: Open or update the issue for /sync-lessons
+        if: always() && steps.drift.outputs.code == '2' && steps.pr.outputs.pull-request-number == ''
+        run: |
+          set -euo pipefail
+          title="Lessons need review: Atlas documents changed"
+          {
+            cat sync/drift-report.md
+            echo "---"
+            echo "Automatic update did not produce a pull request (Copilot token present: ${HAS_COPILOT})."
+            echo "**To update the lessons in Cursor:** open the atlas-onboarding repository in Cursor and run \`/sync-lessons\`."
+            echo "It pulls Atlas, reviews every change above (update a lesson, add a lesson, or skip with a reason), edits"
+            echo "\`lessons.json\` accordingly, runs the tests, records the baseline and prints a summary ready to commit."
+            echo "Instructions: [AGENTS.md](../blob/HEAD/AGENTS.md), [MAINTAINING.md](../blob/HEAD/MAINTAINING.md)."
+          } > issue-body.md
+          existing=$(gh issue list --state open --search "\"$title\" in:title" --json number --jq '.[0].number // empty')
+          if [ -n "$existing" ]; then
+            gh issue edit "$existing" --body-file issue-body.md
+          else
+            gh issue create --title "$title" --body-file issue-body.md --label content-drift
+          fi
+
+      # A pull request now covers the change: close an issue left over from an earlier fallback run.
+      - name: Close the fallback issue
+        if: steps.pr.outputs.pull-request-number != ''
+        env:
+          PR: ${{ steps.pr.outputs.pull-request-number }}
+        run: |
+          title="Lessons need review: Atlas documents changed"
+          existing=$(gh issue list --state open --search "\"$title\" in:title" --json number --jq '.[0].number // empty')
+          if [ -n "$existing" ]; then
+            gh issue close "$existing" --comment "Superseded by pull request #${PR}."
+          fi

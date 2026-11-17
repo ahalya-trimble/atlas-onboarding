@@ -1,143 +1,127 @@
 # Atlas Onboarding
 
-Onboarding for new teammates on the ATLAS desktop app and the eAtlas web app. It has two
-parts that work together and are installed with one command:
+Onboarding for the ATLAS desktop app and eAtlas web app. One install provides:
 
-| Part | What it is for | Runs in |
+| Tool | What it does | Runs in |
 |---|---|---|
-| **Atlas Explorer** (visual guide) | The lessons: flow diagrams, animations, videos, a quiz for every lesson, a glossary, and the real Atlas documents opened live. | Your browser, served from your own computer |
-| **ATLAS Tutor** (agent) | The live part: answers questions from the current Atlas documents and read-only source code, recaps what you asked before ("Revisit my learnings"), and runs an optional recall quiz. | VS Code Copilot Chat, or a Cursor rule |
+| **Atlas Explorer** (visual guide) | 26 lessons in five phases, each with a flow diagram, a step-by-step walkthrough, key points, a quiz and glossary terms. It also opens the real Atlas documents live. | Your browser, served from your own computer at `http://localhost:8765` |
+| **ATLAS Tutor** (agent) | Answers questions from the current Atlas documents and read-only source code, recaps earlier questions ("Revisit my learnings") and offers an optional recall quiz (`/quiz`). | VS Code Copilot Chat, or a Cursor rule |
 
-The Explorer teaches and tests; the tutor answers. Nothing is taught twice.
+The Explorer teaches; the tutor answers.
+
+## Contents
+
+- [Quick start](#quick-start)
+- [Atlas Explorer](#atlas-explorer)
+- [ATLAS Tutor](#atlas-tutor)
+- [How it fits together](#how-it-fits-together)
+- [Repository structure](#repository-structure)
+- [What setup installs](#what-setup-installs)
+- [Privacy and security](#privacy-and-security)
+- [Contributing and maintenance](#contributing-and-maintenance)
+- [Validation](#validation)
 
 ## Quick start
 
-1. Install Git, Python 3.10+ and (for the agent) VS Code with Copilot, or Cursor.
-2. Clone this repository and double-click `setup.bat`. Or run it with your Atlas folder:
+You need Git, Python 3.10+, and VS Code with GitHub Copilot or Cursor.
+
+1. Clone this repository **outside** your Atlas folder.
+2. Double-click `setup.bat`, or pass your Atlas checkout (the folder that contains `Atlas.sln`):
 
    ```powershell
    .\setup.bat "C:\path\to\atlas_v2.0"
    ```
 
-3. Open the visual guide with `Open Atlas Explorer.bat` (inside `<atlas>\.atlas-onboarding\`).
-4. Open the Atlas folder in VS Code, pick **ATLAS Tutor** in Copilot Chat and send `Hi`.
+3. Open the visual guide with `Open Atlas Explorer.bat` (installed in `<atlas>\.atlas-onboarding\`).
+4. Open the Atlas folder in VS Code, select **ATLAS Tutor** in Copilot Chat and send `Hi`.
    In Cursor, type `@atlas-onboarding Hi`.
 
-Step-by-step instructions with troubleshooting: [GETTING-STARTED.md](./GETTING-STARTED.md).
+See [GETTING-STARTED.md](./GETTING-STARTED.md) for detailed steps and troubleshooting.
 
-## How it fits together
+## Atlas Explorer
 
-- **One lesson list.** `curriculum.json` (lesson ids, order, source documents and sections,
-  objectives, starter questions) is shared. The Explorer's `data.js` is generated from it, so the
-  two cannot drift apart.
-- **Live documents.** Every lesson links to the real Atlas documents it came from, shows their
-  current headings, and warns when a document changed after you last reviewed it.
-- **Shared progress.** The Explorer saves your role and progress in one local file. The tutor can
-  read that file (read only) to skip lessons you finished. The tutor keeps its own short
-  summaries of your questions in its own database. Neither writes to the other.
+Explore 26 lessons across five phases: Atlas Desktop, eAtlas Web, How Atlas Connects, Background Services and Source Code.
+Lessons include role-based recommendations, walkthroughs, diagrams, screenshots, quizzes and a 23-term glossary.
 
-## What the tutor does
+The guide also provides videos, a guided tour, live Atlas document headings, offline search and exportable progress.
+Open it with `Open Atlas Explorer.bat`; do not open `index.html` directly.
+
+## ATLAS Tutor
 
 - Answers from the current documents and code, cites the section or symbol, and marks assumptions.
-- Suggests follow-up questions (Q1-Q3) after each answer.
-- **Revisit my learnings:** read-only recap of your saved summaries, grouped by topic.
-- `/quiz`: five clickable questions about topics you discussed. Marks stay in chat and are never saved.
+- Suggests follow-up questions (Q1 to Q3) after each answer.
+- **Revisit my learnings** gives a read-only recap of your saved summaries, grouped by topic.
+- `/quiz` asks five clickable questions about topics you discussed. Marks stay in chat and are never saved.
 - Never modifies or runs product code. Answers are drafts for project-expert review, not certification.
 
-| Message | Behavior |
+| Message | Behaviour |
 |---|---|
-| A question, or `Q1`-`Q3` | Answer, then suggest follow-ups |
+| A question, or `Q1` to `Q3` | Answer, then suggest follow-ups |
 | `Revisit my learnings` | Recap saved summaries, then continue with Q&A |
 | `Revisit <topic>` | Re-explain one earlier topic from the current sources |
 | `/quiz` | Recall quiz on topics you discussed |
 | `Stop` | Stop without silently saving |
 
-Select ATLAS Tutor before sending `Hi` in a new chat. Selecting the agent alone does nothing, and
-switching to another agent ends the tutor workflow.
+Select ATLAS Tutor before sending `Hi` in a new chat. Selecting the agent alone does nothing, and switching
+to another agent ends the tutor workflow.
+
+## How it fits together
+
+- **One lesson file.** `lessons.json` holds every lesson once: text, diagrams, quiz, and the Atlas documents
+  and sections it came from. The Explorer, the tutor and the update checker all read this file, so they
+  cannot drift apart. There is no build step.
+- **Shared progress.** The Explorer saves your profile and progress in one local file. The tutor can read it
+  (read only) to skip lessons you finished. The tutor keeps its own short summaries in its own database.
+  Neither writes to the other.
+- **Automatic updates.** Opening `Open Atlas Explorer.bat` pulls this repository and re-runs setup when
+  lessons changed. Maintainers keep lessons current through a pipeline and reviewed pull requests
+  (see [MAINTAINING.md](./MAINTAINING.md)).
 
 ## Repository structure
 
 | Path | Purpose |
 |---|---|
-| `setup.bat`, `scripts/setup.ps1` | One-step install, update and removal |
-| `scripts/install.py` | Safe installer for the agent files (manifest, rollback, Git exclude) |
-| `scripts/onboarding.py` | Saves the tutor's session summaries in a local SQLite file |
-| `scripts/build_explorer.py` | Generates `explorer/js/data.js` from the two content files |
-| `atlas-onboarding-local.agent.md`, `tutor.md`, `skills/quiz/SKILL.md` | The agent, its workflow and the quiz |
-| `cursor/atlas-onboarding.mdc` | The Cursor rule |
-| `curriculum.json` | Shared lesson list and source references |
-| `content/lessons.json` | How the Explorer presents each lesson (text, diagrams, quiz, videos) |
-| `explorer/` | The visual guide: `index.html`, `js/`, `css/`, `assets/`, and `server.py` |
-| `tests/` | Installer, summary store, tutor text and alignment tests |
+| `setup.bat`, `scripts/setup.ps1` | Install, update or remove the onboarding tools |
+| `scripts/install.py` | Safely install managed files into Atlas |
+| `scripts/onboarding.py` | Save and retrieve tutor summaries |
+| `scripts/open-explorer.bat` | Update the clone and launch the guide |
+| `scripts/sync_docs.py`, `sync/` | Detect any change in the Atlas docs (new, renamed or deleted files, sections added, renamed or removed, edited text) so an agent can review it and update, add or skip lessons |
+| `lessons.json` | Lesson content |
+| `explorer/` | Guide, server and assets |
+| `tests/` | Automated tests |
 
-### Which parts need Python?
-
-| Script | Needed for | If missing |
-|---|---|---|
-| `setup.ps1` | The one-step install (needs PowerShell, included in Windows) | Install by hand |
-| `install.py` | Copying the agent files into Atlas safely | Copy the files yourself; you lose the safety checks |
-| `onboarding.py` | Saving the tutor's summaries (and Revisit my learnings) | Tutor still answers, but nothing is saved |
-| `explorer/server.py` | Opening real documents, live updates and saved progress in the guide | Guide still opens as a plain file with lessons and quizzes |
-| `build_explorer.py` | Maintainers only, after editing content | Not needed by learners |
-
-All scripts use only the Python standard library.
+All scripts use Python's standard library.
 
 ## What setup installs
 
-All installed files are untracked and listed in Git's local `info/exclude`. Shared `.gitignore`,
-existing agents and product files are never changed.
+Setup adds these untracked, Git-excluded paths to the Atlas checkout:
 
-| Installed in the Atlas checkout | Purpose |
-|---|---|
-| `.github/agents/atlas-onboarding-local.agent.md` | The selectable ATLAS Tutor agent |
-| `.github/skills/quiz/SKILL.md` | The `/quiz` skill |
-| `.cursor/rules/atlas-onboarding.mdc` | The Cursor rule |
-| `.atlas-onboarding/` | CLI, curriculum, workflow, manifest, the Explorer copy and its launcher |
-| `.atlas-onboarding/state/` | Your Explorer progress and document-review baseline (created when used) |
-| `.onboarding/` | The tutor's saved summaries (created on first save) |
+- `.github/agents/atlas-onboarding-local.agent.md` and `.github/skills/quiz/SKILL.md`
+- `.cursor/rules/atlas-onboarding.mdc`
+- `.atlas-onboarding/` with the guide, CLI, workflow, manifest and launcher
+- `.atlas-onboarding/state/` for Explorer progress and document review
+- `.onboarding/` for tutor summaries
 
-`install.py` refuses tracked targets, unowned files, edited managed files, linked paths and
-concurrent installs, verifies what it writes, and rolls back on filesystem errors.
-
-Update: re-run `setup.bat` (it also stops any old Explorer server). Remove:
-`.\setup.bat "<atlas>" -Remove`. Your saved learning data is never deleted. Add `-Shortcut` to create a
-desktop shortcut for the guide.
+The installer does not overwrite tracked or unmanaged files, and rolls back on errors.
+Run `Open Atlas Explorer.bat` to update, or use `.\setup.bat "<atlas>" -Remove` to uninstall.
+Saved learning data is not deleted. Add `-Shortcut` to create a desktop shortcut.
 
 ## Privacy and security
 
-- The Explorer's server listens only on `127.0.0.1`, rejects other hosts and other websites, and
-  makes no network calls and no AI calls.
-- It can open only `docs/**` (Markdown or text), `AGENTS.md` and `README.md` from your Atlas folder.
-  Source code, configuration and key files are refused. Values that look like passwords or tokens are
-  hidden. No document text is stored in the browser.
-- Saved summaries and progress are unencrypted, stay on your computer, are excluded from normal Git
-  commits, and do not sync. Do not put credentials, employee or customer details in questions meant
-  to be saved. Git excludes stop accidental staging, not deliberate force-adding.
-- If saving is denied or declined, the tutor says **UNSAVED** and carries on in chat only.
-- The tutor agent sends what it reads to your Copilot or Cursor model, as any IDE agent does.
+- The guide server listens only on `127.0.0.1`; it makes no network or AI calls.
+- It opens only `docs/**`, `AGENTS.md` and `README.md` from Atlas. It refuses source code, configuration and key files,
+  hides values that look like passwords or tokens, and stores no document text in the browser.
+- Progress and summaries are unencrypted, stay on your computer and do not sync. Do not save credentials or personal
+  details in tutor questions.
+- The tutor sends the documents and code it reads to your Copilot or Cursor model.
 
-## Maintaining the content
+## Contributing and maintenance
 
-Edit `curriculum.json` (shared structure) or `content/lessons.json` (presentation), then run:
+Edit `lessons.json` to change lesson content, then run the tests. They check lesson sources, quizzes, glossary terms and
+screenshots. See [explorer/assets/screens/README.md](./explorer/assets/screens/README.md) for screenshot names.
 
-```powershell
-python scripts\build_explorer.py
-```
-
-It stops with a clear message if a lesson exists on one side only. Never edit `explorer/js/data.js`
-by hand; a test fails if it is out of date. Screenshots go in `explorer/assets/screens/` (names in
-that folder's README).
-
-## CLI reference
-
-The tutor runs this itself. For troubleshooting:
-
-```powershell
-python 'C:\path\to\Atlas\.atlas-onboarding\onboarding.py' --atlas 'C:\path\to\Atlas' get-progress
-```
-
-`init` creates storage once, after the saving notice. `save-session` takes one JSON object on stdin
-(see [tutor.md](./tutor.md#cli-use)). Commands print JSON; errors go to stderr with exit code 1.
+The weekly sync pipeline checks lessons against Atlas documents and opens a reviewed pull request. It does not run on
+learners' computers; learners get updates by reopening the guide or running `git pull`. See [MAINTAINING.md](./MAINTAINING.md).
 
 ## Validation
 
@@ -145,7 +129,7 @@ python 'C:\path\to\Atlas\.atlas-onboarding\onboarding.py' --atlas 'C:\path\to\At
 python -m unittest discover -s tests -v
 ```
 
-Tests use temporary Git repositories and databases, never your records. Automated tests do not prove
-live Copilot or Cursor behavior. Before a wider rollout, check in the real IDE: agent and skill
-discovery, command approvals, the saving notice, summaries, Revisit my learnings, quiz buttons and
-scoring, and denied-write behavior.
+CI runs the same command on every pull request (`CI / unit-tests`). Tests use temporary Git repositories and
+databases, never your records. They do not prove live Copilot or Cursor behaviour. Before a wider rollout,
+check in the real IDE: agent and skill discovery, command approvals, the saving notice, summaries, Revisit my
+learnings, quiz buttons and scoring, and denied-write behaviour.

@@ -1,9 +1,36 @@
-# Screenshot slots
+# Screenshots
 
-Drop PNG screenshots here and they appear automatically inside the matching lesson
-(a dashed placeholder is shown until the file exists). Name = lesson id, e.g.:
+Each lesson shows `<shot>.png` from this folder when the lesson has a `"shot"` value in `lessons.json`. A lesson
+with no `shot` simply shows no screenshot. The tests fail if a lesson names a file that does not exist.
 
-- `atlas-overview.png`, `startup-navigation.png`, `product-details.png`, `service-case.png`
-- `dwcr.png`, `bcs.png`, `eatlas-dashboard.png`, `eatlas-assign.png`, `license-activation.png`
+## Included
 
-See `explorer/js/data.js` -> each lesson's `shot` field for the exact names.
+Frames from the Atlas, BCS and eAtlas walkthrough recordings, shown as recorded:
+
+| File | Lesson |
+|---|---|
+| `atlas-overview.png` | What is ATLAS? |
+| `startup-navigation.png` | Install, startup & navigation |
+| `license-activation.png` | Sign-in vs. license vs. authorization |
+| `product-details.png` | The technician workflow, step by step |
+| `service-case.png` | Inside a service case |
+| `bulletins.png` | Manuals, bulletins & downloads |
+| `operations.png` | Detectors & service operations (plugins) |
+| `bcs.png` | Baseline Calibration (BCS) |
+| `eatlas-dashboard.png` | What is eAtlas? |
+| `eatlas-assign.png` | Assigning cases |
+| `eatlas-content.png` | Content, users & authorizations |
+| `licenses.png` | Two kinds of license |
+| `constants.png` | Instrument constants pipeline |
+
+## Lessons without a screenshot
+
+Warranty and support, Repair Assistant, offline and sync, recovery and environments, architecture, the daily
+schedule, Global Service, the documentation capstone and the five source-code lessons. They are not clearly
+shown in the recordings.
+
+## Add or replace a screenshot
+
+1. Save a PNG here, for example `my-shot.png`.
+2. Set that lesson's `"shot": "my-shot"` in `lessons.json` (omit the extension).
+3. Run `python -m unittest discover -s tests`, then `setup.bat` again to copy it into the installed guide.
