@@ -18,8 +18,9 @@ Maintainers only. Learners get updates automatically; the sync process never run
 1. Fetch Atlas docs and check for drift. If lessons are current, stop.
 2. With `COPILOT_GITHUB_TOKEN`, Copilot edits only stale lessons in `lessons.json`. The workflow checks the diff, runs
    tests, records the baseline and opens a pull request.
-3. If the token is missing or any step fails, the workflow opens or updates one issue with the drift report and
-   instructions to run `/sync-lessons` in Cursor.
+3. After drift is detected, if the token is missing or the automatic update fails to produce a pull request, the workflow
+   opens or updates one issue with the drift report and `/sync-lessons` instructions for Cursor. Fetch and drift-check
+   errors fail the run without a fallback issue; inspect the Actions logs for those failures.
 4. The Cursor command in `.cursor/commands/sync-lessons.md` updates only stale lessons, tests them and records the
    baseline. It exists only in this repository; setup does not copy it to learners.
 
