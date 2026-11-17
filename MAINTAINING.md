@@ -1,94 +1,63 @@
-# Maintaining the lessons
+# Maintaining lessons
 
-For maintainers. Learners never run any of this; they get new lessons automatically (see "How learners get updates").
+Maintainers only. Learners get updates automatically; the sync process never runs on their computers.
 
-## The principle: GitHub is the source of truth, not anyone's laptop
+## Source and schedule
 
-- The lessons live in `lessons.json` on the **default branch of this repository on GitHub** (`main`; work is staged on `develop` and merged by pull request).
-- They are checked against the Atlas documents on a **remote Atlas branch** (variable `ATLAS_BRANCH`, for example
-  `main` or `release/2.x`), fetched fresh by the pipeline on every run.
-- `sync_docs.py` refuses to record a baseline from a local Atlas folder that has uncommitted docs or differs from its
-  remote branch (override: `--allow-local`).
+- `lessons.json` on GitHub's default branch is the source of truth. Stage work on `develop` and merge by pull request.
+- The workflow fetches Atlas docs from `ATLAS_BRANCH` on every run. Leave it empty to use Atlas's default branch.
+- `scripts/sync_docs.py check` compares document and section hashes with `sync/baseline.json`. The report contains
+  lesson ids, document paths and section headings, not document text. Exit codes: `0` in sync, `2` drift found, `1` error.
+- `accept` records the baseline. It refuses local Atlas docs with uncommitted changes or a commit that differs from
+  the remote branch; `--allow-local` overrides this check.
 
-## Two modes, with automatic fallback
+## Weekly sync
 
-`.github/workflows/weekly-lesson-sync.yml` runs **every Monday at 09:00 IST** (`30 3 * * 1`) and on demand.
+`.github/workflows/weekly-lesson-sync.yml` runs Mondays at 09:00 IST and on demand.
 
-```
-fetch Atlas docs (shallow, read-only)  ->  sync_docs.py check  ->  stale lessons?
-   no  -> done, nothing is created
-   yes -> PRIMARY, Copilot CLI (if COPILOT_GITHUB_TOKEN exists)
-            Copilot edits lessons.json  ->  guard (only lessons.json changed)  ->  tests  ->  baseline moves
-            ->  pull request
-          FALLBACK, Cursor (no token, or Copilot / guard / tests / pull request did not succeed)
-            ->  one issue listing the stale lessons and changed docs, with the instruction to run /sync-lessons
-```
+1. Fetch Atlas docs and check for drift. If lessons are current, stop.
+2. With `COPILOT_GITHUB_TOKEN`, Copilot edits only stale lessons in `lessons.json`. The workflow checks the diff, runs
+   tests, records the baseline and opens a pull request.
+3. After drift is detected, if the token is missing or the automatic update fails to produce a pull request, the workflow
+   opens or updates one issue with the drift report and `/sync-lessons` instructions for Cursor. Fetch and drift-check
+   errors fail the run without a fallback issue; inspect the Actions logs for those failures.
+4. The Cursor command in `.cursor/commands/sync-lessons.md` updates only stale lessons, tests them and records the
+   baseline. It exists only in this repository; setup does not copy it to learners.
 
-- The Copilot step has `continue-on-error`, so an expired or removed licence never breaks the workflow: the same
-  run falls back to the issue. When a pull request is opened later, an old fallback issue is closed automatically.
-- **Cursor fallback:** open this repository in Cursor and run `/sync-lessons`
-  (`.cursor/commands/sync-lessons.md`). It pulls Atlas, runs the check, edits only the stale lessons, runs the tests,
-  records the baseline and prints a summary ready to commit. That command exists only in this repository;
-  `setup.bat` never copies it to a learner.
-- Both modes follow the same rules in [AGENTS.md](./AGENTS.md).
-- Zero conflicts: one bot branch (`bot/lesson-sync`) that is updated in place, one open issue at a time, a
-  concurrency lock, and nothing reaches the default branch without a reviewed pull request.
+Both paths follow [AGENTS.md](./AGENTS.md). One bot branch, one open fallback issue and a concurrency lock prevent
+overlapping runs. Changes reach the default branch only through a reviewed pull request.
 
-## How learners get updates (no action needed)
+## Learner updates
 
-1. `setup.bat` writes the path of the atlas-onboarding clone it was run from into
-   `<atlas>\.atlas-onboarding\.source-repo` (inside the folder Git already excludes).
-2. Double-clicking `Open Atlas Explorer.bat` first runs `git pull --ff-only` in that clone (silent; offline or local
-   edits just skip it). If the commit changed, it silently re-runs `setup.bat` for that Atlas folder, then starts the guide.
-3. In Cursor, the rule `@atlas-onboarding` does the same check once per chat before its first answer.
-Copilot (VS Code) users get updates through the same launcher.
+`setup.bat` records this clone's path in `<atlas>\.atlas-onboarding\.source-repo`. The Explorer launcher runs
+`git pull --ff-only` and reruns setup when the clone changes. Offline or locally edited clones skip the update.
+Cursor's `@atlas-onboarding` rule checks once per chat; Copilot users update through the launcher.
 
 ## One-time setup
 
-1. **Secrets** (Settings, Secrets and variables, Actions):
-   - `ATLAS_REPO_URL`, Bitbucket Server form `https://bitbucket.trimble.tools/scm/sp/atlas_v2.0.git`
-   - `BITBUCKET_READ_TOKEN`, a read-only HTTP access token (the old name `ATLAS_READ_TOKEN` also works)
-   - `COPILOT_GITHUB_TOKEN`, optional: a fine-grained token created by a person who has Copilot, with the account
-     permission "Copilot Requests". It must be user-owned; classic tokens do not work. When the licence goes away,
-     delete it; the fallback takes over.
-2. **Variable** `ATLAS_BRANCH`: the Atlas branch the lessons track. Leave empty for the Atlas default branch.
-3. Settings, Actions, General: allow GitHub Actions to create pull requests. Create the issue label `content-drift`.
-4. Protect the default branch: pull request required, one approval, the `CI / unit-tests` check required.
-5. Merge these files to the default branch (workflows appear in the Actions tab only from there).
-6. Run **Weekly lesson sync** manually with *init_baseline* ticked, then merge the pull request it opens
-   (`sync/baseline.json`).
+1. Add GitHub Actions secrets:
+   - `ATLAS_REPO_URL`: Bitbucket clone URL, such as `https://bitbucket.trimble.tools/scm/sp/atlas_v2.0.git`.
+   - `BITBUCKET_READ_TOKEN`: read-only token. The legacy name `ATLAS_READ_TOKEN` also works.
+   - `COPILOT_GITHUB_TOKEN` (optional): user-owned fine-grained token with the "Copilot Requests" permission.
+     Classic tokens do not work. Remove it when its owner loses Copilot access; Cursor fallback will take over.
+2. Set `ATLAS_BRANCH` to the Atlas branch to track, or leave it empty for the default branch.
+3. Allow GitHub Actions to create pull requests. Create the `content-drift` issue label.
+4. Protect the default branch: require a pull request, one approval and the `CI / unit-tests` check.
+5. Merge the workflow and related files to the default branch.
+6. Run **Weekly lesson sync** with `init_baseline` checked, then merge its baseline pull request.
 
-## Test it on GitHub (beginner steps)
+## Verify the workflow
 
-1. **CI.** Open a pull request into the default branch; **CI / unit-tests** must go green.
-2. **Baseline.** Actions, **Weekly lesson sync**, Run workflow, tick *init_baseline*. Every step green; merge the pull
-   request. Red *Fetch Atlas documents*: 401/403 token, "repository not found" missing `/scm/`, timeout GitHub cannot
-   reach Bitbucket (use a self-hosted runner).
-3. **In sync.** Run it again, nothing ticked: "In sync", no issue, no pull request.
-4. **Fake a change.** Merge a change to `sync/baseline.json` that alters one letter of one hash under `sections`. Run again.
-5. **Primary mode.** With `COPILOT_GITHUB_TOKEN` set, a pull request "Update lessons for changed Atlas documents" appears.
-   Check that only `lessons.json` and `sync/baseline.json` changed.
-6. **Fallback mode.** Delete the `COPILOT_GITHUB_TOKEN` secret (or break it), run again: a green run and an issue
-   "Lessons need review" with the `/sync-lessons` instructions. Run `/sync-lessons` in Cursor to see it fix the lessons.
-7. **Clean up.** Close fake pull requests and issues, and restore `sync/baseline.json`.
+Run CI on a pull request and require **CI / unit-tests** to pass. Then run **Weekly lesson sync** with `init_baseline`
+checked and merge its pull request. Run again without inputs; expect "In sync", no issue and no pull request.
 
-## Credentials and confidentiality
+To test drift handling, change one hash under `sections` in `sync/baseline.json` and run the workflow. With the token,
+expect a lessons pull request; without it, expect a "Lessons need review" issue. Close test issues and pull requests,
+then restore the baseline.
 
-- Never put credentials in the repository, in chat or in workflow files. Use GitHub secrets.
-- The lessons derive from confidential documents: keep this repository private. Logs, issues and reports contain only
-  lesson ids, document paths and section headings.
-- The Copilot step sends Atlas document text to GitHub's Copilot models. Get security approval first.
+## Security and limits
 
-## The scripts
-
-- `scripts/sync_docs.py check` compares the Atlas docs with `sync/baseline.json` (hashes only, no text).
-  Exit 0 in sync, 2 lessons to review, 1 error. `accept [--lesson ID ... | --drifted]` records the docs as
-  "the lessons match". The baseline notes the Atlas branch and commit it was taken from.
-- `lessons.json` is the only content file. CI runs the tests that validate it.
-
-## Status and known limits
-
-- The baseline has been recorded through the pipeline (`bot/baseline` pull requests).
-- The Copilot CLI flags follow GitHub's documentation. If the first primary-mode run fails, the fallback issue
-  is opened automatically; check repository-specific details (clone URL form, runner, token scopes).
-- GitHub-hosted runners may be unable to reach an internal Bitbucket. Use a self-hosted runner in that case.
+- Keep credentials in GitHub secrets and this repository private.
+- Issues, reports and logs contain lesson ids, document paths and section headings only.
+- Copilot receives Atlas document text. Get security approval before enabling it.
+- GitHub-hosted runners may not reach internal Bitbucket. Use a self-hosted runner if needed.
