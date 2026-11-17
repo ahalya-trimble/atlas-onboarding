@@ -4,7 +4,7 @@ For maintainers. Learners never run any of this; they get new lessons automatica
 
 ## The principle: GitHub is the source of truth, not anyone's laptop
 
-- The lessons live in `lessons.json` on the **default branch of this repository on GitHub** (today `develop`).
+- The lessons live in `lessons.json` on the **default branch of this repository on GitHub** (`main`; work is staged on `develop` and merged by pull request).
 - They are checked against the Atlas documents on a **remote Atlas branch** (variable `ATLAS_BRANCH`, for example
   `main` or `release/2.x`), fetched fresh by the pipeline on every run.
 - `sync_docs.py` refuses to record a baseline from a local Atlas folder that has uncommitted docs or differs from its
@@ -53,14 +53,14 @@ Copilot (VS Code) users get updates through the same launcher.
      delete it; the fallback takes over.
 2. **Variable** `ATLAS_BRANCH`: the Atlas branch the lessons track. Leave empty for the Atlas default branch.
 3. Settings, Actions, General: allow GitHub Actions to create pull requests. Create the issue label `content-drift`.
-4. Protect the default branch: pull request required, one approval, the `CI / test` check required.
+4. Protect the default branch: pull request required, one approval, the `CI / unit-tests` check required.
 5. Merge these files to the default branch (workflows appear in the Actions tab only from there).
 6. Run **Weekly lesson sync** manually with *init_baseline* ticked, then merge the pull request it opens
    (`sync/baseline.json`).
 
 ## Test it on GitHub (beginner steps)
 
-1. **CI.** Open a pull request into the default branch; **CI / test** must go green.
+1. **CI.** Open a pull request into the default branch; **CI / unit-tests** must go green.
 2. **Baseline.** Actions, **Weekly lesson sync**, Run workflow, tick *init_baseline*. Every step green; merge the pull
    request. Red *Fetch Atlas documents*: 401/403 token, "repository not found" missing `/scm/`, timeout GitHub cannot
    reach Bitbucket (use a self-hosted runner).
@@ -86,7 +86,9 @@ Copilot (VS Code) users get updates through the same launcher.
   "the lessons match". The baseline notes the Atlas branch and commit it was taken from.
 - `lessons.json` is the only content file. CI runs the tests that validate it.
 
-## Not verified yet
+## Status and known limits
 
-The workflow has not run on GitHub, and the Copilot CLI flags follow GitHub's documentation without having been run here.
-Do the first runs by hand and fix repository-specific details (clone URL form, runner, token scopes).
+- The baseline has been recorded through the pipeline (`bot/baseline` pull requests).
+- The Copilot CLI flags follow GitHub's documentation. If the first primary-mode run fails, the fallback issue
+  is opened automatically; check repository-specific details (clone URL form, runner, token scopes).
+- GitHub-hosted runners may be unable to reach an internal Bitbucket. Use a self-hosted runner in that case.
