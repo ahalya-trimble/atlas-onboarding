@@ -85,7 +85,7 @@ to another agent ends the tutor workflow.
 | `scripts/install.py` | Safely install managed files into Atlas |
 | `scripts/onboarding.py` | Save and retrieve tutor summaries |
 | `scripts/open-explorer.bat` | Update the clone and launch the guide |
-| `scripts/sync_docs.py`, `sync/` | Detect lessons affected by Atlas document changes |
+| `scripts/sync_docs.py`, `sync/` | Detect any change in the Atlas docs (new, renamed or deleted files, sections added, renamed or removed, edited text) so an agent can review it and update, add or skip lessons |
 | `lessons.json` | Lesson content |
 | `explorer/` | Guide, server and assets |
 | `tests/` | Automated tests |
