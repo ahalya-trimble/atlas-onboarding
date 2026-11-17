@@ -1,0 +1,313 @@
+{
+ "atlasBranch": "Release",
+ "atlasCommit": "788f40f",
+ "docs": {
+  "AGENTS.md": {
+   "hash": "02d8c427bc52ff7b",
+   "sections": {
+    "(intro)": "e3b0c44298fc1c14",
+    "Atlas repository (agent notes)": "b7c810ed4962ef45",
+    "Do not": "845bafde2a22ee49",
+    "How to work here": "f91f06a26d8dd988",
+    "Naming": "3be81a63d2e34cb5",
+    "Verify": "01773fa338eb103d"
+   }
+  },
+  "docs/Functionality/bcs-notifications.md": {
+   "hash": "968f8900c68011aa",
+   "sections": {
+    "(intro)": "e3b0c44298fc1c14",
+    "Atlas desktop behaviour": "825b2f16176a02d4",
+    "BCS notifications, alerts, and service-case blockage": "c23787aaf988927c",
+    "Calibration failsafe (Level 3 exception)": "55c92717103c7ace",
+    "Daily stored procedure": "d508b3e6d15daf1c",
+    "Example row": "8918d434c555cc91",
+    "Monitoring popup (type 4)": "2b0d31ee69529854",
+    "Notification types": "8a384839aa506d17",
+    "SQL tables": "de9acb39a3f9b023",
+    "Service-case blockage (Level 3 only)": "f7b3207f7332997c",
+    "Settings / shell alerts (L1\u2013L3)": "96acbeb137198b4b",
+    "Source map": "9624342833a3ca54",
+    "eAtlas APIs Atlas uses": "0ce248d557f799da"
+   }
+  },
+  "docs/README.md": {
+   "hash": "9af253fc7e38019f",
+   "sections": {
+    "(intro)": "e3b0c44298fc1c14",
+    "Agent / developer notes": "8a4862d65118000e",
+    "Atlas documentation": "10fe0e212a2cfe82",
+    "Core": "36c45c7ab91ba4f4",
+    "Functionality": "00649ebfec644d5a",
+    "Supporting": "ce4c11d29959b31f"
+   }
+  },
+  "docs/projects/01-atlas-application.md": {
+   "hash": "b47bbd05096d23db",
+   "sections": {
+    "(intro)": "e3b0c44298fc1c14",
+    "Agentic AI on Product Details": "b703aac6b698ff5d",
+    "Application structure": "b3c91fd5fd580ce0",
+    "Atlas Application": "662d13873a303f11",
+    "Attachments": "f1d27964e570abec",
+    "Collimator and BaseLine Operations": "d07cc9344cacaa12",
+    "Core technician workflow": "560e720e44a193e7",
+    "Document status": "dbc466cd832d7d52",
+    "Downloads": "567a899ce7a5b25b",
+    "Footer (open case)": "61cdc92cfea0e6cb",
+    "Local MongoDB and Force Sync": "393b871b30212bc9",
+    "Messages project (not UI toasts)": "67f5be63c7584181",
+    "Offline mode": "7eac4ef7ddd75dcc",
+    "Place in the repository": "e9138aecff6a25ff",
+    "Predefined Operations": "d02987ece6ac8275",
+    "Product Details and the service case page": "c17a13f293b8da1d",
+    "Purpose": "bb5ac62d5c047464",
+    "Reports at case completion": "630588ecc24d72b3",
+    "Runtime and integrations": "869495474292080e",
+    "Service Bulletins": "e893e1ff2abf364b",
+    "Service Case Information (summary)": "876ca71515abf5ce",
+    "Service Operations": "848aae9da076ae80",
+    "Service Parts": "fbe2a254284684d6",
+    "Shell view-model initialization": "e2b90ee2fbecfc91",
+    "Source map for later docs": "8c53ea8f355a334b",
+    "Submit DWCR (warranty claim)": "7c1b3ba8f2834ada",
+    "Submit Service-Support (Salesforce / TWoD)": "7557999b381e250e",
+    "Troubleshooting": "5cc93eb36f1deedd",
+    "What Atlas does in the product": "fa62fa0b7df7e14c",
+    "Who uses it": "2921851bfb32a066"
+   }
+  },
+  "docs/projects/02-odata-service.md": {
+   "hash": "8c483f576e6d49bb",
+   "sections": {
+    "(intro)": "e3b0c44298fc1c14",
+    "Document status": "beb3da17c9ef4447",
+    "How Atlas talks to it": "b4a17adbeae97dfa",
+    "OData Service": "4846bf4e416a8609",
+    "Project structure": "27c50caeda9e1250",
+    "Purpose": "e8ecc2290128656d",
+    "Relation to Atlas and eAtlas": "0855c6b719cc80ba",
+    "Shared SQL database": "8bf54a4722b41913",
+    "What it serves": "8cf7214a84405461",
+    "Who uses it": "53068fdca976996c"
+   }
+  },
+  "docs/projects/03-eatlas.md": {
+   "hash": "6555baf35929e650",
+   "sections": {
+    "(intro)": "e3b0c44298fc1c14",
+    "Document status": "ce2c31a915fc0d27",
+    "How it connects to Atlas": "19829a5efb9fc07a",
+    "Project structure": "3fc1b5f383d61821",
+    "Purpose": "0c50bcc24d60f65a",
+    "Relation to Atlas and OData": "8d7b67214e70efff",
+    "Secondary API for Atlas desktop": "9a3bb8f10074ab6e",
+    "Shared SQL database": "0126242d84b68521",
+    "What the web app does": "e5604f5350d7e2fa",
+    "Who uses it": "81756aad0517b2eb",
+    "eAtlas (Atlas Web)": "164006cd89faf2ac"
+   }
+  },
+  "docs/projects/04-baseline-calibration-software.md": {
+   "hash": "dcf66c7ad6242b05",
+   "sections": {
+    "(intro)": "e3b0c44298fc1c14",
+    "Backend (eAtlas only)": "a9fa5230f55b167b",
+    "Baseline Calibration Software (BCS)": "892ff1b5ab3965bd",
+    "Document status": "becadc61eb2cf0c2",
+    "How it sits in Atlas": "9e8075270447abfb",
+    "Project structure": "f2a23cc9ddcbc846",
+    "Purpose": "795c94ad9cbb5483",
+    "Relation to Atlas service cases": "de5e5b84af7be9a9",
+    "Relation to other documented projects": "4a65781e9f5829f8",
+    "Technician workflow (inside BCS)": "c9e9e020acf7a8e9",
+    "Who can use it": "00a03e2b83285506"
+   }
+  },
+  "docs/projects/05-license-activation.md": {
+   "hash": "07889bcde46c487a",
+   "sections": {
+    "(intro)": "e3b0c44298fc1c14",
+    "Document status": "dd333e87b4ad3ce7",
+    "How it relates to Atlas": "89c2cd2fa86cda13",
+    "License Activation (`Almanac.License.Activation`)": "2540a2555378121a",
+    "Project structure": "7b7a372df21c89c9",
+    "Purpose": "447b8367e0fcc8ac",
+    "Relation to other docs": "9cbf85813e0a596d",
+    "What it does": "dfcc7229755e0113",
+    "Who uses it": "de48dfad8b0ee263"
+   }
+  },
+  "docs/projects/06-reset-almanac-offline.md": {
+   "hash": "e0edeec4a4410f88",
+   "sections": {
+    "(intro)": "e3b0c44298fc1c14",
+    "Document status": "4b5628fff49eac93",
+    "How it relates to Atlas": "edcbd20590981a2b",
+    "Purpose": "ae3fa093a268daa3",
+    "Relation to other docs": "11fb68c372b3763c",
+    "Reset Almanac Offline": "effbe0d4f77dcc6d",
+    "Source": "a4eaf02a27f5e877",
+    "What it does not do": "5f5755c3ef15e23d",
+    "Who uses it": "07e18ea85c30759e"
+   }
+  },
+  "docs/projects/07-almanac-api.md": {
+   "hash": "ede81f6e8adc9104",
+   "sections": {
+    "(intro)": "e3b0c44298fc1c14",
+    "Almanac API (`Trimble.Almanac.API`)": "a6ca525a3a7123a2",
+    "Contract (what plugins implement)": "f8c2507ad1022456",
+    "Document status": "5504d49c94273677",
+    "Plugin kinds": "f07349608b82b8a8",
+    "Project structure": "f38e277db2209d78",
+    "Purpose": "79deadc5944476bc",
+    "Relation to other core apps": "36327ee51d5cf08c",
+    "Runtime path inside Atlas": "05e6360de1462a68",
+    "Sprint / installer loop": "edb46d771da18aa9",
+    "Who uses it": "120377514d597862",
+    "Why Atlas is Windows-only": "ca7eccf22afc1b99"
+   }
+  },
+  "docs/projects/08-atlas-twod-master-data-sync.md": {
+   "hash": "64c08a8a19c9ae68",
+   "sections": {
+    "(intro)": "e3b0c44298fc1c14",
+    "Atlas TWoD Master Data Sync (`AtlasTwodMasterDataSync`)": "06c21fc47419dae5",
+    "Document status": "8960d132e8efc4d8",
+    "How a run works": "516478d232194714",
+    "Project structure": "1d856f3dbf950721",
+    "Purpose": "fce38b723e6e02c7",
+    "Relation to other core apps": "7dc8f89d2aa9c0ae",
+    "What is synced": "adcfd4bfbb8a686c",
+    "Who uses it": "3059c28ac475a51c"
+   }
+  },
+  "docs/projects/09-atlas-ems-licensing.md": {
+   "hash": "99bc915e87645d82",
+   "sections": {
+    "(intro)": "e3b0c44298fc1c14",
+    "1. Atlas EMS Integration Service": "3bb1bf531308bda5",
+    "2. EMS Renewal Callback Checker (timer in Integration Service)": "8ef989f30cdc206d",
+    "3. EMS Auto Provision (timer in Integration Service)": "939a918342b7607c",
+    "4. License Transfer Tool": "dcacec58f3e25887",
+    "Atlas EMS licensing (supporting services)": "61e328908cdfe2b9",
+    "Document status": "6334e7aa90cf85f5",
+    "End-to-end: buy \u2192 run Atlas": "00bc2a159facd657",
+    "External license types (what customers buy)": "a183a1ec1e59bf36",
+    "How this relates to core apps": "61fb983c60e56738",
+    "OData: Poseidon \u2192 EMS v4": "b45834a249e3a293",
+    "Old path vs new path": "06d268fdf2f22154",
+    "Project map": "54ad206b6855c808"
+   }
+  },
+  "docs/projects/10-license-generator-service.md": {
+   "hash": "e7fc9e9cf90aa4fd",
+   "sections": {
+    "(intro)": "e3b0c44298fc1c14",
+    "API": "f1efa0073294d0ef",
+    "Anti-abuse (BRD)": "1d347e9a523f61f8",
+    "Document status": "e743c2feae23bb36",
+    "Flow": "773b1629843a36f5",
+    "License Generator Service (instrument service licenses)": "3fc2ddca746766ef",
+    "Product models (config)": "92fe13947e03f8a5",
+    "Project structure": "d64bf354902c0513",
+    "Relation to other docs": "d3278ac27df8bf3c",
+    "Service license types": "9edf4ee0cd2f8b8f",
+    "What this service does vs what it does not": "bcfd23986f00dd30",
+    "Who uses it": "15f2647ad780a4fb",
+    "Why it exists (Hardware as a Service)": "45012f1ab856eea2"
+   }
+  },
+  "docs/projects/11-atlas-file-system-watcher.md": {
+   "hash": "189710458474e61b",
+   "sections": {
+    "(intro)": "e3b0c44298fc1c14",
+    "Atlas File System Watcher": "80f146c6a32e943b",
+    "Document status": "1d1fdfa0e9df8b97",
+    "Project structure": "1a58705023bc7ef8",
+    "Relation to other docs": "64d0a9bd73c22b67",
+    "What it does": "d496058fbfdbb1f9",
+    "Why it exists": "7fc3efc68791a122"
+   }
+  },
+  "docs/projects/12-file-comparer.md": {
+   "hash": "2ba7a6e576f6ec4d",
+   "sections": {
+    "(intro)": "e3b0c44298fc1c14",
+    "Document status": "90aa1d329f4ffa0e",
+    "File Comparer": "8f00e613dca8a8d0",
+    "Project structure": "e21f2de145ae058c",
+    "Relation to other docs": "899f5479f58a44c5",
+    "What it does": "1a75a85778252259",
+    "Why it exists": "cfbbe7d687247898"
+   }
+  },
+  "docs/projects/13-service-bulletin-notification.md": {
+   "hash": "e8a3c815efef2f2b",
+   "sections": {
+    "(intro)": "e3b0c44298fc1c14",
+    "Document status": "f27bd5ba6e0c4e0b",
+    "Project structure": "a3193df4bc792100",
+    "Relation to other docs": "96b4b4bd8b6787f6",
+    "Service Bulletin Notification Service": "f1c9f95226bd01eb",
+    "What it does": "9fe5174c7aa6beeb",
+    "Why it exists": "0b97198dd857005a"
+   }
+  },
+  "docs/projects/14-atlas-ai-sync-service.md": {
+   "hash": "b48a418153325fd1",
+   "sections": {
+    "(intro)": "e3b0c44298fc1c14",
+    "Atlas AI Sync Service (Agentic AI knowledge base)": "85e2b40a66c27507",
+    "Atlas technicians": "087057cb94f25e45",
+    "Bulletin orchestrator": "2b314b82d59de4fd",
+    "Daily timer (`AIServiceBulletinSyncScheduler`)": "cf196b4f1e132a80",
+    "Document status": "75279ec341852fd5",
+    "High-level flow": "bcb38082b3cd0a69",
+    "Initial migration consoles": "05094dc56e0be472",
+    "Orchestrator statuses (both types)": "e7d86a282c28fbfe",
+    "Project structure": "69fe7a83a56b2697",
+    "Relation to other docs": "4c7e97048585aa1a",
+    "Service bulletins (new)": "faf6e06cb62fd712",
+    "Service manuals (unchanged path)": "769068e2b9c8e2db",
+    "Two document types": "0053faa55d675729",
+    "Webhook": "4ee287fbf5743f8a",
+    "Why it exists": "9ca37e802c48041a",
+    "`ServiceBulletinInitialSync`": "8bd8efc5a9054bfd",
+    "`ServiceManualInitialSync`": "521da0491940e333"
+   }
+  },
+  "docs/projects/15-atlas-global-service.md": {
+   "hash": "6dbd05bbf4d50dbb",
+   "sections": {
+    "(intro)": "e3b0c44298fc1c14",
+    "Atlas Global Service": "92e21db29b0b308c",
+    "Document status": "2a2c9676b30f049f",
+    "Endpoints": "1512af91229d0e19",
+    "Flow": "9f9d8471660a464b",
+    "Project structure": "0ab0959b626951fe",
+    "Relation to other docs": "566c495fe8095053",
+    "Who uses it": "042b536652fb8fec",
+    "Why it exists": "e821ff8e41b77c41"
+   }
+  },
+  "docs/projects/16-atlas-environment-switch.md": {
+   "hash": "5a4fe3492ba895b4",
+   "sections": {
+    "(intro)": "e3b0c44298fc1c14",
+    "Atlas Environment Switch": "198e4c2ddb267587",
+    "Document status": "8fa9c24178b160e7",
+    "Flow": "1a70f087d07eb707",
+    "Project structure": "8d369635b5927f08",
+    "Relation to other docs": "3f8d19939baada91",
+    "What it does": "92855c04c6de296d",
+    "What it does not do": "1880665ac032c8f0",
+    "Who uses it": "4f3d07848fb732e2",
+    "Why it exists": "cc6a4082667fb05a"
+   }
+  }
+ },
+ "recorded": "2026-11-17",
+ "version": 1
+}
