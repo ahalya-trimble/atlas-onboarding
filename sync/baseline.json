@@ -3,11 +3,11 @@
  "atlasCommit": "788f40f",
  "docs": {
   "AGENTS.md": {
-   "hash": "01d8c427bc52ff7b",
+   "hash": "02d8c427bc52ff7b",
    "sections": {
     "(intro)": "e3b0c44298fc1c14",
     "Atlas repository (agent notes)": "b7c810ed4962ef45",
-    "Do not": "835bafde2a22ee49",
+    "Do not": "845bafde2a22ee49",
     "How to work here": "f91f06a26d8dd988",
     "Naming": "3be81a63d2e34cb5",
     "Verify": "01773fa338eb103d"
@@ -43,7 +43,7 @@
    }
   },
   "docs/projects/01-atlas-application.md": {
-   "hash": "a47bbd05096d23db",
+   "hash": "b47bbd05096d23db",
    "sections": {
     "(intro)": "e3b0c44298fc1c14",
     "Agentic AI on Product Details": "b703aac6b698ff5d",
