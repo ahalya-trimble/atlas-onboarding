@@ -87,17 +87,7 @@ Start the guide with `Open Atlas Explorer.bat` (not by opening index.html). It r
 
 ## Keeping the agent and the guide in step (for maintainers)
 
-The agent and the guide share one lesson list.
-
-- `curriculum.json` defines what the ATLAS Tutor teaches and checks: lesson ids, order, source documents and sections, objectives, starter questions and assessment questions.
-- `content/lessons.json` holds how the guide presents each lesson: pictures, key points, quiz, videos.
-- `explorer/js/data.js` is generated from both. Never edit it by hand. After changing either file run:
-
-```
-python scripts/build_explorer.py
-```
-
-The script stops with a clear message if a lesson exists on one side only. The test suite also fails if `data.js` is out of date.
+The agent and the guide share one lesson file, `lessons.json`: lesson ids, source documents and sections, text, pictures, quiz and videos. Edit it, then run `python -m unittest discover -s tests`; the tests check every lesson is complete. Nothing needs to be generated.
 
 ## Progress storage
 

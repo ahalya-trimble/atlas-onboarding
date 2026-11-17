@@ -11,7 +11,7 @@ disable-model-invocation: true
 
 - Run only on an explicit `/quiz` request while ATLAS Tutor is selected. If invoked with another agent, explain that the learner must select ATLAS Tutor first; do not start or switch agents yourself.
 - Before reading the tutor workflow, curriculum, or learner progress, use host-supplied active ATLAS Tutor agent instructions as the activation signal. Do not require visibility of the agent picker or a separate selection-check tool. A file read, quote, skill discovery, or prior tutor conversation is not active agent context. If active ATLAS Tutor instructions are absent, stop and ask the learner to select ATLAS Tutor; do not start or switch agents yourself.
-- Read [the installed tutor workflow](../../../.atlas-onboarding/tutor.md) and [curriculum](../../../.atlas-onboarding/curriculum.json). Follow their English-only, read-only product-source, and privacy rules.
+- Read [the installed tutor workflow](../../../.atlas-onboarding/tutor.md) and [lesson list](../../../.atlas-onboarding/lessons.json). Follow their English-only, read-only product-source, and privacy rules.
 - This is an optional recall aid, not an assessment, certification, or employee evaluation. Never start automatically, block anything on a score, or claim mastery. The Atlas Explorer already has a quiz for every lesson; this one only helps the learner remember what they asked the tutor.
 - Read learner progress only through the installed onboarding CLI's `get-progress`. Never call `init` or `save-session` for a quiz, and never call `record-coverage` or `record-attempt`. Do not save questions, answers, scores, or explanations in learner data.
 

@@ -1,9 +1,14 @@
-# Screenshot slots
+# Screenshots
 
-Drop PNG screenshots here and they appear automatically inside the matching lesson
-(a dashed placeholder is shown until the file exists). Name = lesson id, e.g.:
+Each lesson shows `<shot>.png` from this folder when the file exists. If a file is missing, the lesson simply shows no screenshot.
+The `shot` name of every lesson is in `lessons.json`.
 
-- `atlas-overview.png`, `startup-navigation.png`, `product-details.png`, `service-case.png`
-- `dwcr.png`, `bcs.png`, `eatlas-dashboard.png`, `eatlas-assign.png`, `license-activation.png`
+Included (frames from the Atlas, BCS and eAtlas walkthrough recordings, shown as recorded):
+`atlas-overview`, `startup-navigation`, `license-activation`, `product-details`, `service-case`, `bulletins`,
+`operations`, `bcs`, `eatlas-dashboard`, `eatlas-assign`, `eatlas-content`, `licenses`, `constants`.
 
-See `explorer/js/data.js` -> each lesson's `shot` field for the exact names.
+Still without a screenshot (not clearly shown in the recordings): `ai-chat`, `offline`, `dwcr`, `recovery`, `architecture`, `jobs`, `global`.
+To replace or add one, save a PNG here with that name and run setup.bat again.
+
+To show a screenshot for a lesson, save `<name>.png` here and set that lesson's `"shot": "<name>"` in `lessons.json`
+(the tests fail if a lesson names a file that does not exist).

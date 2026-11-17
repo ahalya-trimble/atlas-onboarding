@@ -1,19 +1,26 @@
 (function () {
-  const D = window.ATLAS, $ = (s, r = document) => r.querySelector(s);
+  fetch("lessons.json", { cache: "no-store" }).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
+    .then(start, () => { document.body.innerHTML = "<p style=\"padding:24px;font:16px sans-serif\">The lessons could not be loaded. Start the guide with <b>Open Atlas Explorer.bat</b> (it runs a small local server) instead of opening index.html directly.</p>"; });
+
+  function start(D) {
+  const $ = (s, r = document) => r.querySelector(s);
   const KEY = "atlas-explorer-v2";
   const EMO = /[\p{Extended_Pictographic}\uFE0F\u200D\u20E3]/gu;
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
   const md = s => esc(s).replace(/`([^`]+)`/g, "<code>$1</code>").replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>").replace(/(^|\s)_([^_]+)_/g, "$1<i>$2</i>");
   const phaseOf = id => D.phases.find(p => p.id === id);
   const lessonsOf = pid => D.lessons.filter(l => l.phase === pid);
-  const byId = id => D.lessons.find(l => l.id === ((D.legacyIds || {})[id] || id));
+  const ALIAS = {}; D.lessons.forEach(l => (l.aliases || []).forEach(a => { ALIAS[a] = l.id; }));   // older lesson ids -> current id
+  const byId = id => D.lessons.find(l => l.id === (ALIAS[id] || id));
+  const srcOf = l => l.sources.map(s => s.path);
+  const secsOf = l => Object.fromEntries(l.sources.filter(s => s.sections.length).map(s => [s.path, s.sections]));
 
   let checkout = "";
   const emptyState = () => ({ done: {}, quiz: {}, xp: 0, unlock: false, profile: null, updatedAt: 0 });
   const storageKey = () => checkout ? KEY + ":" + checkout : KEY;
   const readState = key => { try { return Object.assign(emptyState(), JSON.parse(localStorage.getItem(key) || "null") || {}); } catch (e) { return emptyState(); } };
   let S = readState(KEY);
-  const migrate = () => { const m = D.legacyIds || {}; ["done", "quiz"].forEach(k => { const o = S[k] || {}; Object.keys(m).forEach(old => { if (old in o) { o[m[old]] = o[old]; delete o[old]; } }); }); };
+  const migrate = () => { const m = ALIAS; ["done", "quiz"].forEach(k => { const o = S[k] || {}; Object.keys(m).forEach(old => { if (old in o) { o[m[old]] = o[old]; delete o[old]; } }); }); };
   migrate();
   const localWork = () => !!(S.profile || S.skipProfile || S.xp || Object.keys(S.done || {}).length || Object.keys(S.quiz || {}).length);
 
@@ -208,14 +215,14 @@
       ${l.goals && l.goals.length ? `<div class="goals"><b>After this lesson you can</b><ul>${l.goals.map(g => `<li>${esc(g)}</li>`).join("")}</ul></div>` : ""}
       <div class="viz" style="--c:${p.color}">${viz(l.viz)}</div>
       ${l.video ? videoBlock(l) : ""}
-      ${l.shot ? `<figure class="shot"><img src="assets/screens/${l.shot}.png" alt="${esc(l.title)} screenshot"/><figcaption>Screenshot slot: <code>explorer/assets/screens/${l.shot}.png</code></figcaption></figure>` : ""}
+      ${l.shot ? `<figure class="shot"><img src="assets/screens/${l.shot}.png" alt="${esc(l.title)} screenshot"/><figcaption>${esc(l.title)}</figcaption></figure>` : ""}
       <h2 class="sec">Key points</h2><ul class="pts" style="--c:${p.color}">${l.points.map(x => `<li>${hl(x, l.terms)}</li>`).join("")}</ul>
       ${l.terms.length ? `<h2 class="sec">New words</h2><div class="terms">${l.terms.map(t => `<div class="term"><b>${esc(t)}</b><span>${md(D.glossary[t] || "")}</span></div>`).join("")}</div>` : ""}
       ${l.try ? `<div class="try"><b>Try it in your IDE:</b> ${md(l.try)}</div>` : ""}
       <h2 class="sec">Check yourself</h2><div class="quiz" data-quiz><p><b>${md(q.q)}</b></p>${q.o.map((o, i) => `<button class="opt" data-a="${i}">${esc(o)}</button>`).join("")}<div class="why" data-why></div></div>
             <h2 class="sec">Ask next <small>(click to copy, then paste into the ATLAS Tutor chat in VS Code)</small></h2><div class="prompts">${l.prompts.map(x => `<button class="prompt" data-copy="${esc((profileLine() ? profileLine() + " " : "") + x)}">${esc(x)}</button>`).join("")}</div>
-      <div class="live" data-live="${esc(l.src.join("|"))}" data-secs="${esc(JSON.stringify(l.secs || {}))}"></div>
-      <div class="src">Source-grounded in: ${l.src.map(s => `<a class="srcl" href="#/doc/${encodeURI(s)}" title="Open this document"><code>${esc(s)}</code></a>`).join(" ")}<br><small>Drafted from repo docs. Verify against your Atlas revision. Anything marked "assumption" is not taken from a diagram.</small></div>
+      <div class="live" data-live="${esc(srcOf(l).join("|"))}" data-secs="${esc(JSON.stringify(secsOf(l)))}"></div>
+      <div class="src">Source-grounded in: ${srcOf(l).map(s => `<a class="srcl" href="#/doc/${encodeURI(s)}" title="Open this document"><code>${esc(s)}</code></a>`).join(" ")}<br><small>Drafted from repo docs. Verify against your Atlas revision. Anything marked "assumption" is not taken from a diagram.</small></div>
       <div class="foot">${prev ? `<a class="btn ghost" href="#/lesson/${prev.id}">&larr; ${esc(prev.title)}</a>` : "<span></span>"}
       <button class="btn big ${S.done[l.id] ? "ghost" : ""}" data-done="${l.id}">${S.done[l.id] ? "Completed (click to undo)" : "Mark as complete"}</button>
       ${next ? `<a class="btn" href="#/lesson/${next.id}">${esc(next.title)} &rarr;</a>` : "<span></span>"}</div>`;
@@ -228,7 +235,7 @@
     ["Use the agent (ask questions)", "Open the Atlas folder in VS Code, open Copilot Chat, choose the ATLAS Tutor agent, and send:", ["Hi"]],
     ["Open the visual guide", "The installer opens it for you. Next time, double-click this file inside your Atlas checkout:", ["<atlas>\\.atlas-onboarding\\Open Atlas Explorer.bat"]],
     ["Personalize it", "On first launch enter your first name and role. Your path, recommended lessons and copied prompts adapt. Prompts you copy carry a profile line so the agent adapts too (it does not store your name).", []],
-    ["Add your own screenshots", "Save PNGs into explorer/assets/screens/ using the file names listed in that folder's README, then run setup.bat again to copy them in.", []],
+    ["Add your own screenshots", "Screenshots from the walkthrough recordings are already included. To replace one, save a PNG into explorer/assets/screens/ with the same file name (see that folder's README), then run setup.bat again to copy it in.", []],
     ["Update or remove", "Pull new changes and run setup again to update. Add -Remove to uninstall; your learning progress is kept.", ["git pull", '.\\setup.bat "C:\\path\\to\\atlas_v2.0"', '.\\setup.bat "C:\\path\\to\\atlas_v2.0" -Remove']]
   ];
   const TROUBLE = [["'python' is not recognized", "Install Python 3.10+ from python.org, tick 'Add to PATH', then reopen the terminal."], ["Installer says 'Refusing to overwrite' or 'tracked file'", "Something already exists at that path. Read the message; the installer never overwrites files it does not own."], ["Agent not in the Copilot list", "Reload VS Code (Ctrl+Shift+P, Developer: Reload Window) and re-open the Atlas folder."], ["Diagrams look unstyled", "Open index.html from the installed explorer folder, not from a copy that lost its css and js folders."], ["Video does not play", "The Google Drive recording needs your Trimble sign-in and access. Use 'Open in Google Drive'."]];
@@ -334,7 +341,7 @@
     gl.slice(0, 2).forEach(([k, v]) => h += `<div class="ans"><b>${esc(k)}</b><p>${md(v)}</p></div>`);
     scored.forEach(({ c }) => {
       const best = c.l.points.map(p => ({ p, s: tok(p).filter(w => qt.includes(w)).length })).sort((a, b) => b.s - a.s).slice(0, 2).map(x => x.p);
-      h += `<div class="ans"><b>${esc(c.l.title)}</b><p>${md(c.l.hook)}</p><ul>${best.map(p => `<li>${md(p)}</li>`).join("")}</ul><a href="#/lesson/${c.l.id}" data-close>Open lesson</a> <span class="mut">Source: ${c.l.src.map(esc).join(", ")}</span></div>`;
+      h += `<div class="ans"><b>${esc(c.l.title)}</b><p>${md(c.l.hook)}</p><ul>${best.map(p => `<li>${md(p)}</li>`).join("")}</ul><a href="#/lesson/${c.l.id}" data-close>Open lesson</a> <span class="mut">Source: ${srcOf(c.l).map(esc).join(", ")}</span></div>`;
     });
     if (!h) h = `<p>I could not find that in the guide. Try different words, or ask the ATLAS Tutor agent in VS Code, which can read the actual source.</p>`;
     return h + `<div class="repo" data-repo="${esc(q)}"></div><button class="btn ghost" data-copy="${esc((profileLine() ? profileLine() + " " : "") + q)}">Copy as a prompt for the ATLAS Tutor agent</button>`;
@@ -552,4 +559,5 @@
   window.addEventListener("hashchange", route);
   document.addEventListener("error", e => { const t = e.target; if (t && t.tagName === "IMG" && t.parentNode) t.parentNode.classList.add("empty"); }, true);
   askPanel(); hasApi().then(loadProgress).then(() => { route(); if (!S.profile && !S.skipProfile) profileModal(true); });
+  }
 })();

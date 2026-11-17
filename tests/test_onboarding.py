@@ -30,25 +30,25 @@ class Fixture(unittest.TestCase):
     def setUp(self):
         self.temporary = tempfile.TemporaryDirectory(prefix="atlas-onboarding-test-")
         self.addCleanup(self.temporary.cleanup)
-        self.atlas = Path(self.temporary.name)
+        self.atlas = Path(self.temporary.name).resolve()   # the installer resolves paths; so must the fixture
         (self.atlas / "Atlas.sln").write_text("test solution", encoding="ascii")
         subprocess.run(["git", "init", "-q", str(self.atlas)], check=True, capture_output=True)
         self.exclude = self.atlas / ".git" / "info" / "exclude"
         self.exclude.write_bytes(b"# Existing private excludes\n/local-only.txt\n")
         self.original_exclude = self.exclude.read_bytes()
-        curriculum = json.loads((ROOT / "curriculum.json").read_text(encoding="utf-8-sig"))
-        for lesson in curriculum["lessons"]:
+        lesson_list = json.loads((ROOT / "lessons.json").read_text(encoding="utf-8-sig"))
+        for lesson in lesson_list["lessons"]:
             for source in lesson["sources"]:
                 path = self.atlas / source["path"]
                 path.parent.mkdir(parents=True, exist_ok=True)
                 path.write_text("# Fixture documentation\n", encoding="ascii")
-        self.curriculum_path = ROOT / "curriculum.json"
+        self.lessons_path = ROOT / "lessons.json"
 
     def install(self):
         return installer.install(self.atlas, "install")
 
     def store(self):
-        return database.Store(self.atlas, self.curriculum_path)
+        return database.Store(self.atlas, self.lessons_path)
 
     def init_store(self):
         self.install()
@@ -226,7 +226,7 @@ class InstallerTests(Fixture):
         self.assertIn("name: ATLAS Tutor\n", agent)
         self.assertIn("description:", agent)
 
-        for relative in ("tutor.md", "curriculum.json"):
+        for relative in ("tutor.md", "lessons.json"):
             self.assertTrue((self.atlas / ".github" / "agents" /
                              ".." / ".." / ".atlas-onboarding" / relative).is_file())
 
@@ -362,6 +362,29 @@ class InstallerTests(Fixture):
         installer.install(self.atlas, "remove")
         self.assertFalse(skill.exists())
         self.assertEqual(before, store.path.read_bytes())
+
+    def test_update_replaces_old_curriculum_file_with_lessons_file(self):
+        old = {(".atlas-onboarding/curriculum.json" if name.endswith("lessons.json") else name): source
+               for name, source in installer.FILES.items()}
+        with patch.object(installer, "FILES", old):
+            self.install()
+        curriculum = self.atlas / ".atlas-onboarding" / "curriculum.json"
+        self.assertTrue(curriculum.is_file())
+        self.assertTrue(installer.install(self.atlas, "update")["verified"])
+        self.assertFalse(curriculum.exists())
+        self.assertTrue((self.atlas / ".atlas-onboarding" / "lessons.json").is_file())
+        manifest = json.loads((self.atlas / installer.MANIFEST).read_text())
+        self.assertEqual(set(installer.FILES), set(manifest["files"]))
+        installer.install(self.atlas, "remove")
+        self.assertFalse((self.atlas / ".atlas-onboarding" / "lessons.json").exists())
+
+    def test_old_curriculum_install_can_be_removed(self):
+        old = {(".atlas-onboarding/curriculum.json" if name.endswith("lessons.json") else name): source
+               for name, source in installer.FILES.items()}
+        with patch.object(installer, "FILES", old):
+            self.install()
+        installer.install(self.atlas, "remove")
+        self.assertFalse((self.atlas / ".atlas-onboarding" / "curriculum.json").exists())
 
     def test_legacy_update_does_not_overwrite_unowned_quiz(self):
         self.install_legacy_package()

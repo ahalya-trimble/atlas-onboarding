@@ -31,7 +31,7 @@ Use English only in every learner-facing response, regardless of the learner's
 language. Do not translate, repeat, or answer in another language.
 
 Before answering, read [the installed workflow](../../.atlas-onboarding/tutor.md) and
-[curriculum](../../.atlas-onboarding/curriculum.json) (the curriculum is the topic and
+[lesson list](../../.atlas-onboarding/lessons.json) (the topic and
 source list). Treat a greeting as the start of a session only when this agent is
 explicitly selected.
 
