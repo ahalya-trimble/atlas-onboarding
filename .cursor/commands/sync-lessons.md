@@ -12,14 +12,15 @@ Ask for the path of the local Atlas checkout (the folder with `Atlas.sln`) if yo
 2. **Find stale lessons.** Run `python scripts/sync_docs.py --atlas "<atlas>" check`.
    - Exit 0 ("In sync"): say so and stop.
    - Exit 1: show the message and stop (a missing baseline means the first baseline has not been recorded yet).
-   - Exit 2: continue. The report is `sync/drift-report.md` (lesson ids, changed documents and section names).
+   - Exit 2: continue. The report is `sync/drift-report.md` (lesson ids, changed documents, file changes and section names).
 3. **Update the lessons.** Read `AGENTS.md` and `MAINTAINING.md`. For each lesson in the report, open the changed
    sections in `<atlas>/docs/` and edit only the affected lessons in `lessons.json`, following the rules in
    `AGENTS.md` (facts only from the documents, mark unclear points "assumption", do not add fields, do not create new
    lessons for uncited documents; list them instead).
 4. **Validate.** Run `python -m unittest discover -s tests -v`. Fix every failure you caused and run it again until
    all tests pass.
-5. **Record the baseline.** Run `python scripts/sync_docs.py --atlas "<atlas>" accept --lesson <ids you updated>`.
+5. **Record the baseline.** If lessons changed, run `python scripts/sync_docs.py --atlas "<atlas>" accept --lesson <ids you updated>`.
+   If only docs files changed, run `python scripts/sync_docs.py --atlas "<atlas>" accept --files-only`.
    It refuses if the Atlas folder has uncommitted docs or is not at its remote commit; if so, report that instead
    of forcing it.
 6. **Summarize** in a short list: per lesson, what changed and which document section it came from, plus anything

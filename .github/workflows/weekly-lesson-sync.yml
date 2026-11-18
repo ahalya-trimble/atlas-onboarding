@@ -1,12 +1,11 @@
 # Weekly lesson sync. Runs on GitHub, never on a laptop, and never breaks when a licence disappears.
 #
 #   1. Check out atlas-onboarding (its default branch) and shallow-clone the Atlas docs from Bitbucket
-#   2. scripts/sync_docs.py check   -> which lessons are stale? (no AI)
-#   3. Primary mode  - Copilot CLI: if COPILOT_GITHUB_TOKEN exists, Copilot edits lessons.json; the workflow
-#                      guards (only lessons.json changed), runs the tests, moves the baseline, opens a pull request.
-#   4. Fallback mode - Cursor: if there is no token, or Copilot / the tests / the pull request did not succeed,
-#                      an issue is opened (or updated) listing the stale lessons and changed documents, with
-#                      the instruction to run /sync-lessons in Cursor (.cursor/commands/sync-lessons.md).
+#   2. scripts/sync_docs.py check   -> which lessons or docs files changed? (no AI)
+#   3. Primary mode  - Copilot CLI updates stale lessons; docs-only changes update the file inventory.
+#                      The workflow tests and opens a reviewed pull request.
+#   4. Fallback mode - Cursor: if automation does not produce a pull request, open or update an issue
+#                      listing changed lessons and files, with instructions for /sync-lessons.
 #
 # Secrets: ATLAS_REPO_URL, BITBUCKET_READ_TOKEN (ATLAS_READ_TOKEN is accepted as the old name);
 #          COPILOT_GITHUB_TOKEN (optional, a user-owned fine-grained token with "Copilot Requests").
@@ -96,15 +95,25 @@ jobs:
         if: steps.drift.outputs.code == '1'
         run: echo "sync_docs.py could not run. Run this workflow once with init_baseline ticked." && exit 1
 
+      - name: Classify drift
+        id: lessons
+        if: steps.drift.outputs.code == '2'
+        run: |
+          if grep -q '^## Lessons to review$' sync/drift-report.md; then
+            echo "stale=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "stale=false" >> "$GITHUB_OUTPUT"
+          fi
+
       # ---- primary mode: Copilot CLI. A removed or expired licence only makes this step fail, never the workflow. ----
       - uses: actions/setup-node@v4
-        if: steps.drift.outputs.code == '2' && env.HAS_COPILOT == 'true'
+        if: steps.drift.outputs.code == '2' && steps.lessons.outputs.stale == 'true' && env.HAS_COPILOT == 'true'
         with:
           node-version: "22"
 
       - name: Update lessons with Copilot CLI
         id: copilot
-        if: steps.drift.outputs.code == '2' && env.HAS_COPILOT == 'true'
+        if: steps.drift.outputs.code == '2' && steps.lessons.outputs.stale == 'true' && env.HAS_COPILOT == 'true'
         continue-on-error: true
         env:
           COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}
@@ -127,6 +136,25 @@ jobs:
           python -m unittest discover -s tests -v
           python scripts/sync_docs.py --atlas atlas accept --drifted
 
+      - name: Record docs-only changes
+        id: docs_only
+        if: steps.drift.outputs.code == '2' && steps.lessons.outputs.stale == 'false'
+        continue-on-error: true
+        run: |
+          python -m unittest discover -s tests -v
+          python scripts/sync_docs.py --atlas atlas accept --files-only
+
+      - name: Initialize docs inventory
+        id: inventory
+        if: steps.drift.outputs.code == '0' && steps.init.outcome == 'skipped'
+        run: |
+          if python -c "import json; raise SystemExit(0 if isinstance(json.load(open('sync/baseline.json')).get('files'), dict) else 1)"; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            python scripts/sync_docs.py --atlas atlas accept --files-only
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Open the pull request
         id: pr
         if: steps.verify.outcome == 'success'
@@ -145,9 +173,35 @@ jobs:
           # Pull requests opened with the default token do not start other workflows (such as CI).
           # To run CI on them, pass a GitHub App token or a fine-grained token: token: ${{ secrets.BOT_PR_TOKEN }}
 
+      - name: Open the docs-only pull request
+        id: docs_pr
+        if: steps.docs_only.outcome == 'success'
+        continue-on-error: true
+        uses: peter-evans/create-pull-request@v7
+        with:
+          branch: bot/docs-update
+          base: ${{ github.event.repository.default_branch }}
+          title: Update Atlas docs inventory
+          commit-message: Update Atlas docs inventory
+          body-path: sync/drift-report.md
+          labels: content-drift
+          add-paths: sync/baseline.json
+
+      - name: Open the inventory migration pull request
+        id: inventory_pr
+        if: steps.inventory.outputs.changed == 'true'
+        uses: peter-evans/create-pull-request@v7
+        with:
+          branch: bot/docs-inventory
+          base: ${{ github.event.repository.default_branch }}
+          title: Record Atlas docs file inventory
+          commit-message: Record Atlas docs file inventory
+          body: "Adds file fingerprints so Atlas Explorer can flag local docs that differ from the reviewed Atlas docs."
+          add-paths: sync/baseline.json
+
       # ---- fallback mode: Cursor. Anything above that did not end in a pull request lands here. ----
       - name: Open or update the issue for /sync-lessons
-        if: always() && steps.drift.outputs.code == '2' && steps.pr.outputs.pull-request-number == ''
+        if: always() && steps.drift.outputs.code == '2' && steps.pr.outputs.pull-request-number == '' && steps.docs_pr.outputs.pull-request-number == ''
         run: |
           set -euo pipefail
           title="Lessons need review: Atlas documents changed"
@@ -168,9 +222,9 @@ jobs:
 
       # A pull request now covers the change: close an issue left over from an earlier fallback run.
       - name: Close the fallback issue
-        if: steps.pr.outputs.pull-request-number != ''
+        if: steps.pr.outputs.pull-request-number != '' || steps.docs_pr.outputs.pull-request-number != '' || steps.inventory_pr.outputs.pull-request-number != ''
         env:
-          PR: ${{ steps.pr.outputs.pull-request-number }}
+          PR: ${{ steps.pr.outputs.pull-request-number || steps.docs_pr.outputs.pull-request-number || steps.inventory_pr.outputs.pull-request-number }}
         run: |
           title="Lessons need review: Atlas documents changed"
           existing=$(gh issue list --state open --search "\"$title\" in:title" --json number --jq '.[0].number // empty')

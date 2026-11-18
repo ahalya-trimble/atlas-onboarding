@@ -27,6 +27,7 @@ class WorkflowTests(unittest.TestCase):
         self.assertIn("secrets.BITBUCKET_READ_TOKEN", self.text)
         self.assertIn("clone --depth 1", self.text)
         self.assertIn("scripts/sync_docs.py --atlas atlas check", self.text)
+        self.assertIn("--files-only", self.text)
 
     def test_copilot_is_primary_and_can_never_break_the_workflow(self):
         self.assertIn("secrets.COPILOT_GITHUB_TOKEN != ''", self.text)
@@ -39,6 +40,12 @@ class WorkflowTests(unittest.TestCase):
     def test_cursor_issue_is_the_fallback_when_there_is_no_pull_request(self):
         self.assertIn("steps.pr.outputs.pull-request-number == ''", self.text)
         self.assertIn("/sync-lessons", self.text)
+
+    def test_docs_only_drift_updates_inventory_without_running_copilot(self):
+        self.assertIn("steps.lessons.outputs.stale == 'true'", self.text)
+        self.assertIn("steps.lessons.outputs.stale == 'false'", self.text)
+        self.assertIn("Open the docs-only pull request", self.text)
+        self.assertIn("accept --files-only", self.text)
 
     def test_only_lessons_json_may_be_changed_by_the_agent(self):
         self.assertIn('"$changed" != "lessons.json"', self.text)
@@ -67,6 +74,7 @@ class LearnerAutoUpdateTests(unittest.TestCase):
         setup = read("scripts", "setup.ps1")
         self.assertIn(".source-repo", setup)
         self.assertIn("open-explorer.bat", setup)
+        self.assertIn("sync\\baseline.json", setup)
         self.assertIn("ATLAS_ONBOARDING_SILENT", setup)
         self.assertIn("ATLAS_ONBOARDING_SILENT", read("setup.bat"))
 

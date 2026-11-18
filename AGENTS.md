@@ -31,6 +31,7 @@ The Atlas checkout path is given in the instruction (for example `./atlas`). The
 3. If you can run commands, run `python -m unittest discover -s tests` and fix failures you caused. (In the pipeline you cannot; it runs the tests itself afterwards and fails the run if they break.)
 4. Finish with a short summary per lesson: what changed and which document section it came from.
 5. If you can run commands and the Atlas documents are in a folder such as `./atlas`, finish with
-   `python scripts/sync_docs.py --atlas atlas accept --lesson <ids you updated>`. It records the new baseline
-   inside your branch, so it takes effect only when a person reviews and merges the pull request.
+   `python scripts/sync_docs.py --atlas atlas accept --lesson <ids you updated>` when lessons changed.
+   If only docs files changed and no lessons need edits, use `python scripts/sync_docs.py --atlas atlas accept --files-only`.
+   It records the new baseline inside your branch, so it takes effect only when a person reviews and merges the pull request.
    Never record a baseline from a local Atlas folder that has uncommitted changes.

@@ -6,8 +6,9 @@ Maintainers only. Learners get updates automatically; the sync process never run
 
 - `lessons.json` on GitHub's default branch is the source of truth. Stage work on `develop` and merge by pull request.
 - The workflow fetches Atlas docs from `ATLAS_BRANCH` on every run. Leave it empty to use Atlas's default branch.
-- `scripts/sync_docs.py check` compares document and section hashes with `sync/baseline.json`. The report contains
-  lesson ids, document paths and section headings, not document text. Exit codes: `0` in sync, `2` drift found, `1` error.
+- `scripts/sync_docs.py check` compares lesson-section hashes and a full Markdown/text file inventory with
+  `sync/baseline.json`. The report contains lesson ids, document paths and section headings, not document text.
+  Exit codes: `0` in sync, `2` lesson or file drift found, `1` error.
 - `accept` records the baseline. It refuses local Atlas docs with uncommitted changes or a commit that differs from
   the remote branch; `--allow-local` overrides this check.
 
@@ -15,9 +16,10 @@ Maintainers only. Learners get updates automatically; the sync process never run
 
 `.github/workflows/weekly-lesson-sync.yml` runs Mondays at 09:00 IST and on demand.
 
-1. Fetch Atlas docs and check for drift. If lessons are current, stop.
+1. Fetch Atlas docs and check for lesson or file drift. If both are current, stop.
 2. With `COPILOT_GITHUB_TOKEN`, Copilot edits only stale lessons in `lessons.json`. The workflow checks the diff, runs
-   tests, records the baseline and opens a pull request.
+   tests, records the baseline and opens a pull request. File-only changes update the docs inventory in a reviewed
+   pull request without editing lessons.
 3. After drift is detected, if the token is missing or the automatic update fails to produce a pull request, the workflow
    opens or updates one issue with the drift report and `/sync-lessons` instructions for Cursor. Fetch and drift-check
    errors fail the run without a fallback issue; inspect the Actions logs for those failures.
@@ -26,6 +28,8 @@ Maintainers only. Learners get updates automatically; the sync process never run
 
 Both paths follow [AGENTS.md](./AGENTS.md). One bot branch, one open fallback issue and a concurrency lock prevent
 overlapping runs. Changes reach the default branch only through a reviewed pull request.
+After merge, Explorer compares local `docs/**/*.md` and `docs/**/*.txt` files with the checked-in inventory. It alerts
+learners about mismatches and related lessons; learners pull Atlas docs themselves.
 
 ## Learner updates
 
@@ -44,16 +48,19 @@ Cursor's `@atlas-onboarding` rule checks once per chat; Copilot users update thr
 3. Allow GitHub Actions to create pull requests. Create the `content-drift` issue label.
 4. Protect the default branch: require a pull request, one approval and the `CI / unit-tests` check.
 5. Merge the workflow and related files to the default branch.
-6. Run **Weekly lesson sync** with `init_baseline` checked, then merge its baseline pull request.
+6. Run **Weekly lesson sync** with `init_baseline` checked, then merge its baseline pull request. This records the
+   docs file inventory used by Explorer's local-update alert.
 
 ## Verify the workflow
 
 Run CI on a pull request and require **CI / unit-tests** to pass. Then run **Weekly lesson sync** with `init_baseline`
 checked and merge its pull request. Run again without inputs; expect "In sync", no issue and no pull request.
 
-To test drift handling, change one hash under `sections` in `sync/baseline.json` and run the workflow. With the token,
-expect a lessons pull request; without it, expect a "Lessons need review" issue. Close test issues and pull requests,
-then restore the baseline.
+To test lesson drift, change one hash under `sections` in `sync/baseline.json` and run the workflow. With the token,
+expect a lessons pull request; without it, expect a "Lessons need review" issue. To test docs-only drift, add or change
+a Markdown file under `docs/`, run the workflow, and expect a docs-inventory pull request. After merge, launch Explorer
+with a local Atlas checkout that differs from the inventory; expect the update alert. Close test issues and pull
+requests, then restore the baseline and docs.
 
 ## Security and limits
 

@@ -12,6 +12,8 @@ How it works
   * lessons.json says which Atlas doc sections each lesson was written from.
   * sync/baseline.json stores a short fingerprint (hash) of every doc and of every section, taken the
     last time someone confirmed the lessons match the docs. It stores no document text.
+  * The baseline also inventories docs/**/*.md and docs/**/*.txt so Explorer can flag local copies
+    that differ from the latest reviewed Atlas docs.
   * check re-reads the docs, compares fingerprints and writes sync/drift-report.md
     (headings and lesson ids only, never document text).
 
@@ -87,6 +89,49 @@ def read_doc(atlas, rel):
     sections = split_sections(path.read_text(encoding="utf-8-sig", errors="replace"))
     return {"hash": fingerprint("\n".join(f"{k}\n{v}" for k, v in sections.items())),
             "sections": {k: fingerprint(v) for k, v in sections.items()}}
+
+
+def scan_doc_files(atlas):
+    """Return fingerprints for readable Markdown and text files under docs/."""
+    root = Path(atlas).resolve() / "docs"
+    files = {}
+    if not root.is_dir():
+        return files
+    for path in sorted(root.rglob("*")):
+        if path.is_symlink() or not path.is_file() or path.suffix.lower() not in (".md", ".txt"):
+            continue
+        rel = path.relative_to(root.parent).as_posix()
+        doc = read_doc(atlas, rel)
+        if doc is None:
+            raise ValueError(f"Cannot inventory Atlas doc: {rel}")
+        files[rel] = fingerprint(path.read_text(encoding="utf-8-sig", errors="replace"))
+    return files
+
+
+def compare_doc_files(atlas, baseline):
+    """Return created, modified, and deleted docs; None means an older baseline lacks inventory."""
+    if "files" not in baseline:
+        return None
+    previous = baseline["files"]
+    if not isinstance(previous, dict):
+        raise ValueError("Atlas docs file inventory is malformed")
+    if any(not isinstance(path, str) or not path.startswith("docs/")
+           or ".." in path.replace("\\", "/").split("/") or not isinstance(digest, str)
+           for path, digest in previous.items()):
+        raise ValueError("Atlas docs file inventory contains an invalid entry")
+    current = scan_doc_files(atlas)
+    changes = []
+    for path in sorted(set(previous) | set(current)):
+        if path not in previous:
+            status = "created"
+        elif path not in current:
+            status = "deleted"
+        elif previous[path] != current[path]:
+            status = "modified"
+        else:
+            continue
+        changes.append({"path": path, "status": status})
+    return changes
 
 
 def lesson_sources(lessons_data):
@@ -193,7 +238,7 @@ def compare(atlas, lessons_data, baseline):
     return lessons, notes, uncovered
 
 
-def write_report(atlas, lessons, notes, uncovered, baseline):
+def write_report(atlas, lessons, notes, uncovered, baseline, file_changes=None):
     lines = ["# Atlas documents vs. lessons", "",
              f"Checked: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}  ",
              f"Atlas branch: {git_branch(atlas)}  ",
@@ -210,6 +255,9 @@ def write_report(atlas, lessons, notes, uncovered, baseline):
     if uncovered:
         lines += ["## Documents no lesson cites yet (possible new lesson or source)", ""] \
             + [f"- `{p}`" for p in uncovered] + [""]
+    if file_changes:
+        lines += ["## Atlas docs files changed", ""] \
+            + [f"- {change['status']}: `{change['path']}`" for change in file_changes] + [""]
     REPORT.parent.mkdir(parents=True, exist_ok=True)
     REPORT.write_text("\n".join(lines), encoding="utf-8", newline="\n")
 
@@ -222,8 +270,9 @@ def cmd_check(atlas, lessons_data):
               f"  python scripts/sync_docs.py --atlas \"{atlas}\" accept")
         return 1
     lessons, notes, uncovered = compare(atlas, lessons_data, baseline)
-    write_report(atlas, lessons, notes, uncovered, baseline)
-    if not (lessons or notes or uncovered):
+    file_changes = compare_doc_files(atlas, baseline)
+    write_report(atlas, lessons, notes, uncovered, baseline, file_changes)
+    if not (lessons or notes or uncovered or file_changes):
         print("In sync: every lesson matches the documents it cites.")
         return 0
     print(f"{len(lessons)} lesson(s) to review", ("(" + ", ".join(lessons) + ")") if lessons else "")
@@ -235,12 +284,17 @@ def cmd_check(atlas, lessons_data):
         print("  note:", note.replace("`", ""))
     for path in uncovered:
         print("  uncovered document:", path)
+    for change in file_changes or []:
+        print(f"  {change['status']} document: {change['path']}")
     print(f"Report: {shown(REPORT)}")
-    return 2 if lessons else 0
+    return 2 if lessons or file_changes else 0
 
 
-def cmd_accept(atlas, lessons_data, only, drifted=False, allow_local=False):
+def cmd_accept(atlas, lessons_data, only, drifted=False, allow_local=False, files_only=False):
     atlas = Path(atlas).resolve()
+    if files_only and (only is not None or drifted):
+        print("--files-only cannot be combined with --lesson or --drifted.", file=sys.stderr)
+        return 1
     problem = None if allow_local else checkout_problem(atlas)
     if problem:
         print(f"Refusing to record a baseline: {problem}. "
@@ -262,19 +316,30 @@ def cmd_accept(atlas, lessons_data, only, drifted=False, allow_local=False):
         print("Unknown lesson id(s): " + ", ".join(unknown), file=sys.stderr)
         return 1
     baseline = load_baseline() or {"version": 1, "docs": {}}
-    wanted = {path for i, items in sources.items() if not only or i in only for path, _ in items}
-    for path in sorted(wanted):
-        doc = read_doc(atlas, path)
-        if doc is None:
-            print(f"Cannot read {path} in the Atlas folder; baseline not changed for it.", file=sys.stderr)
-            return 1
-        baseline["docs"][path] = doc
+    file_changes = compare_doc_files(atlas, baseline)
+    wanted = set()
+    if not files_only:
+        wanted = {path for i, items in sources.items() if not only or i in only for path, _ in items}
+        for path in sorted(wanted):
+            doc = read_doc(atlas, path)
+            if doc is None:
+                print(f"Cannot read {path} in the Atlas folder; baseline not changed for it.", file=sys.stderr)
+                return 1
+            baseline["docs"][path] = doc
+    changes = baseline.get("changes", {})
+    if not isinstance(changes, dict):
+        raise ValueError("Atlas docs change history is malformed")
+    for change in file_changes or []:
+        changes[change["path"]] = change["status"]
+    baseline["changes"] = changes
+    baseline["files"] = scan_doc_files(atlas)
     baseline["atlasCommit"] = git_head(atlas)
     baseline["atlasBranch"] = git_branch(atlas)
     baseline["recorded"] = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     BASELINE.parent.mkdir(parents=True, exist_ok=True)
     BASELINE.write_text(json.dumps(baseline, indent=1, sort_keys=True) + "\n", encoding="utf-8", newline="\n")
-    print(f"Baseline recorded for {len(wanted)} document(s) at Atlas {baseline['atlasBranch']} @ {baseline['atlasCommit']}.")
+    print(f"Baseline recorded for {len(wanted)} lesson source(s) and "
+          f"{len(baseline['files'])} docs file(s) at Atlas {baseline['atlasBranch']} @ {baseline['atlasCommit']}.")
     return 0
 
 
@@ -289,6 +354,7 @@ def main():
     group = parser.add_mutually_exclusive_group()
     group.add_argument("--lesson", nargs="+", help="with accept: only these lesson ids")
     group.add_argument("--drifted", action="store_true", help="with accept: only the lessons that check currently flags")
+    group.add_argument("--files-only", action="store_true", help="with accept: update only the docs file inventory")
     args = parser.parse_args()
     atlas = args.atlas.resolve()
     # A full checkout has Atlas.sln; a sparse CI checkout only needs the docs folder.
@@ -302,7 +368,7 @@ def main():
             return 1
     lessons_data = json.loads(LESSONS.read_text(encoding="utf-8-sig"))
     if args.command == "accept":
-        return cmd_accept(atlas, lessons_data, args.lesson, args.drifted, args.allow_local)
+        return cmd_accept(atlas, lessons_data, args.lesson, args.drifted, args.allow_local, args.files_only)
     return cmd_check(atlas, lessons_data)
 
 
