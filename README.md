@@ -43,7 +43,9 @@ See [GETTING-STARTED.md](./GETTING-STARTED.md) for detailed steps and troublesho
 Explore 26 lessons across five phases: Atlas Desktop, eAtlas Web, How Atlas Connects, Background Services and Source Code.
 Lessons include role-based recommendations, walkthroughs, diagrams, screenshots, quizzes and a 23-term glossary.
 
-Watch the [Atlas onboarding video guide](./explorer/assets/videos/atlas-onboarding-video-guide-org.mp4).
+<video controls width="960">
+  <source src="https://raw.githubusercontent.com/ahalya-trimble/atlas-onboarding/feature/sync-data/explorer/assets/videos/atlas-onboarding-video-guide-org.mp4" type="video/mp4">
+</video>
 
 The guide also provides videos, a guided tour, Atlas document links, a local-docs update alert, offline search and exportable progress.
 Open it with `Open Atlas Explorer.bat`; do not open `index.html` directly.
