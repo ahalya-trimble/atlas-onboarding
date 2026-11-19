@@ -15,7 +15,8 @@ path if it is not given.
 
 Hard rules (repeated here because they matter most):
 - Facts come only from the Atlas documents; mark unclear points "assumption".
-- Change only the lessons the drift report lists, and only `lessons.json`.
+- Review every item in the drift report (any documentation change, cited or not) and give each one an outcome:
+  update an existing lesson, create a new lesson, or skip it with a reason. Edit only `lessons.json`.
 - Never modify the Atlas checkout. Never print secrets.
-- Do not commit, push or open a pull request unless asked. Run `sync_docs.py accept --lesson <ids you updated>`
+- Do not commit, push or open a pull request unless asked. Run `sync_docs.py accept --drifted`
   only as the last step, after the tests pass and the user has confirmed the lessons are correct.

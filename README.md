@@ -1,3 +1,4 @@
+
 # Atlas Onboarding
 
 Onboarding for the ATLAS desktop app and eAtlas web app. One install provides:
@@ -8,6 +9,8 @@ Onboarding for the ATLAS desktop app and eAtlas web app. One install provides:
 | **ATLAS Tutor** (agent) | Answers questions from the current Atlas documents and read-only source code, recaps earlier questions ("Revisit my learnings") and offers an optional recall quiz (`/quiz`). | VS Code Copilot Chat, or a Cursor rule |
 
 The Explorer teaches; the tutor answers.
+
+https://github.com/user-attachments/assets/05ff6dbd-c03b-49eb-9559-d1121d395ef9
 
 ## Contents
 
@@ -89,7 +92,7 @@ to another agent ends the tutor workflow.
 | `scripts/install.py` | Safely install managed files into Atlas |
 | `scripts/onboarding.py` | Save and retrieve tutor summaries |
 | `scripts/open-explorer.bat` | Update the clone and launch the guide |
-| `scripts/sync_docs.py`, `sync/` | Detect lessons affected by Atlas document changes |
+| `scripts/sync_docs.py`, `sync/` | Detect any change in the Atlas docs (new, renamed or deleted files, sections added, renamed or removed, edited text) so an agent can review it and update, add or skip lessons |
 | `lessons.json` | Lesson content |
 | `explorer/` | Guide, server and assets |
 | `tests/` | Automated tests |

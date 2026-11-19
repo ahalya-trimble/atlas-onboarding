@@ -1,11 +1,15 @@
 # Weekly lesson sync. Runs on GitHub, never on a laptop, and never breaks when a licence disappears.
 #
 #   1. Check out atlas-onboarding (its default branch) and shallow-clone the Atlas docs from Bitbucket
-#   2. scripts/sync_docs.py check   -> which lessons or docs files changed? (no AI)
-#   3. Primary mode  - Copilot CLI updates stale lessons; docs-only changes update the file inventory.
-#                      The workflow tests and opens a reviewed pull request.
-#   4. Fallback mode - Cursor: if automation does not produce a pull request, open or update an issue
-#                      listing changed lessons and files, with instructions for /sync-lessons.
+#   2. scripts/sync_docs.py check   -> did ANY Atlas document change? New, renamed or deleted files, added,
+#                                      renamed or removed sections, any edited text, cited or not (no AI)
+#   3. Primary mode  - Copilot CLI: if COPILOT_GITHUB_TOKEN exists, Copilot inspects every changed item and
+#                      triages it (update a lesson / add a lesson / skip with a reason; see AGENTS.md). The workflow
+#                      guards (nothing but lessons.json may change, and "no lesson edit" is allowed), runs the tests,
+#                      moves the baseline for everything reviewed, and opens a pull request.
+#   4. Fallback mode - Cursor: if there is no token, or Copilot / the tests / the pull request did not succeed,
+#                      an issue is opened (or updated) listing what changed, with the instruction to run
+#                      /sync-lessons in Cursor (.cursor/commands/sync-lessons.md).
 #
 # Secrets: ATLAS_REPO_URL, BITBUCKET_READ_TOKEN (ATLAS_READ_TOKEN is accepted as the old name);
 #          COPILOT_GITHUB_TOKEN (optional, a user-owned fine-grained token with "Copilot Requests").
@@ -41,7 +45,13 @@ jobs:
       PROMPT: >-
         Follow AGENTS.md and MAINTAINING.md, task "sync lessons with changed Atlas documents".
         The Atlas documents are in ./atlas (read only) and the drift report is sync/drift-report.md.
-        Edit only lessons.json. You may run: python -m unittest discover -s tests -v
+        Any documentation change is drift, cited or not. For EVERY item in the report, open the changed file or
+        section in ./atlas and triage it: update the relevant existing lesson (including its sources: new, renamed
+        or moved sections and paths), or create a complete new lesson under the right phase, or skip it if it is
+        not relevant to onboarding (for example Document status edits or housekeeping) and say why.
+        Edit only lessons.json (leaving it unchanged is correct when every item is skipped). Then write
+        sync/review-summary.md with one line per report item: updated lesson, new lesson, or skipped and why.
+        You may run: python -m unittest discover -s tests -v
     steps:
       - uses: actions/checkout@v4
         with:
@@ -83,7 +93,7 @@ jobs:
           add-paths: sync/baseline.json
 
       # ---- normal run ----
-      - name: Which lessons are stale?
+      - name: What changed in the Atlas documents?
         id: drift
         if: steps.init.outcome == 'skipped'
         run: |
@@ -122,7 +132,9 @@ jobs:
           copilot -p "$PROMPT" \
             --allow-tool='read,write,shell(python -m unittest discover -s tests -v)' --no-ask-user
 
-      # The agent may change lessons.json and nothing else; the tests must pass; then the baseline moves.
+      # The agent may change lessons.json and nothing else. Changing nothing is fine: every item may have been judged
+      # not relevant to onboarding. The tests must pass; then the baseline moves past EVERYTHING that was reviewed
+      # (cited or not, new and deleted files, items the agent skipped), so it is not reported again.
       - name: Guard, test, move the baseline
         id: verify
         if: steps.copilot.outcome == 'success'
@@ -130,11 +142,22 @@ jobs:
         run: |
           set -euo pipefail
           changed=$(git status --porcelain | awk '{print $2}' | sort)
-          if [ "$changed" != "lessons.json" ]; then
-            echo "Expected exactly lessons.json to change, got:"; echo "$changed"; exit 1
+          if [ -n "$changed" ] && [ "$changed" != "lessons.json" ]; then
+            echo "Expected only lessons.json to change (or nothing), got:"; echo "$changed"; exit 1
           fi
           python -m unittest discover -s tests -v
           python scripts/sync_docs.py --atlas atlas accept --drifted
+          {
+            cat sync/drift-report.md
+            echo
+            echo "## Agent review summary"
+            echo
+            if [ -s sync/review-summary.md ]; then cat sync/review-summary.md; else echo "The agent did not write a review summary."; fi
+            if [ -z "$changed" ]; then
+              echo
+              echo "No lesson edit was needed; this pull request only moves the baseline past the reviewed changes."
+            fi
+          } > sync/pr-body.md
 
       - name: Record docs-only changes
         id: docs_only
@@ -163,9 +186,9 @@ jobs:
         with:
           branch: bot/lesson-sync
           base: ${{ github.event.repository.default_branch }}
-          title: Update lessons for changed Atlas documents
-          commit-message: Update lessons for changed Atlas documents
-          body-path: sync/drift-report.md
+          title: Review Atlas documentation changes and update lessons
+          commit-message: Review Atlas documentation changes and update lessons
+          body-path: sync/pr-body.md
           labels: content-drift
           add-paths: |
             lessons.json
@@ -210,8 +233,9 @@ jobs:
             echo "---"
             echo "Automatic update did not produce a pull request (Copilot token present: ${HAS_COPILOT})."
             echo "**To update the lessons in Cursor:** open the atlas-onboarding repository in Cursor and run \`/sync-lessons\`."
-            echo "It pulls Atlas, finds the stale lessons above, edits only those in \`lessons.json\`, runs the tests and"
-            echo "prints a summary ready to commit. Instructions: [AGENTS.md](../blob/HEAD/AGENTS.md), [MAINTAINING.md](../blob/HEAD/MAINTAINING.md)."
+            echo "It pulls Atlas, reviews every change above (update a lesson, add a lesson, or skip with a reason), edits"
+            echo "\`lessons.json\` accordingly, runs the tests, records the baseline and prints a summary ready to commit."
+            echo "Instructions: [AGENTS.md](../blob/HEAD/AGENTS.md), [MAINTAINING.md](../blob/HEAD/MAINTAINING.md)."
           } > issue-body.md
           existing=$(gh issue list --state open --search "\"$title\" in:title" --json number --jq '.[0].number // empty')
           if [ -n "$existing" ]; then

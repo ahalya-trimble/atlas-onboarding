@@ -50,6 +50,18 @@ class WorkflowTests(unittest.TestCase):
     def test_only_lessons_json_may_be_changed_by_the_agent(self):
         self.assertIn('"$changed" != "lessons.json"', self.text)
 
+    def test_an_agent_that_changes_nothing_still_moves_the_baseline(self):
+        self.assertIn('[ -n "$changed" ] &&', self.text)             # an empty diff passes the guard
+        verify = self.text.split("id: verify")[1].split("id: pr")[0]
+        self.assertLess(verify.index("unittest discover"), verify.index("accept --drifted"))
+        self.assertIn("sync/pr-body.md", self.text)
+        self.assertIn("add-paths", self.text)
+
+    def test_prompt_asks_for_triage_of_every_change(self):
+        for phrase in ("EVERY item", "create a complete new lesson", "not relevant to onboarding",
+                       "sync/review-summary.md"):
+            self.assertIn(phrase, self.text)
+
     def test_no_old_workflows_are_left_behind(self):
         names = {p.name for p in (ROOT / ".github" / "workflows").iterdir()}
         self.assertEqual({"ci.yml", "weekly-lesson-sync.yml"}, names)
@@ -59,7 +71,7 @@ class CursorCommandTests(unittest.TestCase):
     def test_command_has_the_required_steps_in_order(self):
         text = read(".cursor", "commands", "sync-lessons.md")
         order = ["pull --ff-only", "sync_docs.py --atlas", "AGENTS.md", "MAINTAINING.md", "lessons.json",
-                 "python -m unittest discover -s tests -v", "accept --lesson", "Summarize"]
+                 "python -m unittest discover -s tests -v", "accept --drifted", "Summarize"]
         positions = [text.index(item) for item in order]
         self.assertEqual(sorted(positions), positions)
 
