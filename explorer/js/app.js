@@ -176,6 +176,13 @@
     return `<h2 class="sec">Watch this</h2><div class="vid"><div class="vidmain">${main}</div>
       <div class="vidside"><div class="vtag">Recommended chapters for this lesson</div><ul>${(v.chapters || []).map(c => `<li>${esc(c)}</li>`).join("")}</ul><p class="vn">${esc(d.note || "")}</p>${open}</div></div>`;
   }
+  function screenshotBlock(l) {
+    const shots = Array.isArray(l.shot) ? l.shot : [l.shot];
+    return `<div class="shots">${shots.map(shot => {
+      const caption = shot.split("-").map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(" ");
+      return `<figure class="shot"><img src="assets/screens/${esc(shot)}.png" alt="${esc(caption)} screenshot"/><figcaption>${esc(caption)}</figcaption></figure>`;
+    }).join("")}</div>`;
+  }
 
   /* ---------- key-term highlighting ---------- */
   function hl(text, terms) {
@@ -214,7 +221,7 @@
       ${l.goals && l.goals.length ? `<div class="goals"><b>After this lesson you can</b><ul>${l.goals.map(g => `<li>${esc(g)}</li>`).join("")}</ul></div>` : ""}
       <div class="viz" style="--c:${p.color}">${viz(l.viz)}</div>
       ${l.video ? videoBlock(l) : ""}
-      ${l.shot ? `<figure class="shot"><img src="assets/screens/${l.shot}.png" alt="${esc(l.title)} screenshot"/><figcaption>${esc(l.title)}</figcaption></figure>` : ""}
+      ${l.shot ? screenshotBlock(l) : ""}
       <h2 class="sec">Key points</h2><ul class="pts" style="--c:${p.color}">${l.points.map(x => `<li>${hl(x, l.terms)}</li>`).join("")}</ul>
       ${l.terms.length ? `<h2 class="sec">New words</h2><div class="terms">${l.terms.map(t => `<div class="term"><b>${esc(t)}</b><span>${md(D.glossary[t] || "")}</span></div>`).join("")}</div>` : ""}
       ${l.try ? `<div class="try"><b>Try it in your IDE:</b> ${md(l.try)}</div>` : ""}
