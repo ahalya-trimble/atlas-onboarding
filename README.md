@@ -46,7 +46,11 @@ See [GETTING-STARTED.md](./GETTING-STARTED.md) for detailed steps and troublesho
 Explore 26 lessons across five phases: Atlas Desktop, eAtlas Web, How Atlas Connects, Background Services and Source Code.
 Lessons include role-based recommendations, walkthroughs, diagrams, screenshots, quizzes and a 23-term glossary.
 
-The guide also provides videos, a guided tour, live Atlas document headings, offline search and exportable progress.
+<video controls width="960">
+  <source src="https://raw.githubusercontent.com/ahalya-trimble/atlas-onboarding/feature/sync-data/explorer/assets/videos/atlas-onboarding-video-guide-org.mp4" type="video/mp4">
+</video>
+
+The guide also provides videos, a guided tour, Atlas document links, a local-docs update alert, offline search and exportable progress.
 Open it with `Open Atlas Explorer.bat`; do not open `index.html` directly.
 
 ## ATLAS Tutor
@@ -102,7 +106,7 @@ Setup adds these untracked, Git-excluded paths to the Atlas checkout:
 - `.github/agents/atlas-onboarding-local.agent.md` and `.github/skills/quiz/SKILL.md`
 - `.cursor/rules/atlas-onboarding.mdc`
 - `.atlas-onboarding/` with the guide, CLI, workflow, manifest and launcher
-- `.atlas-onboarding/state/` for Explorer progress and document review
+- `.atlas-onboarding/state/` for Explorer progress
 - `.onboarding/` for tutor summaries
 
 The installer does not overwrite tracked or unmanaged files, and rolls back on errors.

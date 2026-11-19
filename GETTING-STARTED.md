@@ -59,7 +59,7 @@ Double-click `<atlas>\.atlas-onboarding\Open Atlas Explorer.bat` and leave its w
 6. Use **Ask the tutor** (bottom right) for a quick offline search of the guide and the Atlas documents.
 7. Finish with **Save-state summary** and paste it into a tutor chat later to resume.
 
-**Live documents.** Always start the guide with `Open Atlas Explorer.bat`, not by opening `index.html`. Each lesson links to the real Atlas documents it came from and shows a **Live from the Atlas docs** box with their current headings. If a document changed after you last reviewed it, the box says so and offers **Mark these documents as reviewed**. Only `docs/`, `AGENTS.md` and `README.md` can be opened; source code, configuration and key files cannot, and values that look like passwords or tokens are hidden.
+**Source documents and updates.** Each lesson links to the Atlas documents it came from. Open a link to read the current document from your Atlas checkout. At startup, Explorer compares local Markdown and text files under `docs/` with the latest version reviewed by the weekly pipeline. If they differ, it lists the files and related lessons. Pull the latest Atlas docs, then review the changes. Explorer never pulls Atlas automatically. Only `docs/`, `AGENTS.md` and `README.md` can be opened; source code, configuration and key files cannot, and values that look like passwords or tokens are hidden.
 
 ## Step 4. Use the tutor
 

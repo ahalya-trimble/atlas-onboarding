@@ -2,7 +2,7 @@
 """Atlas Explorer local server.
 
 Serves the visual guide and a small READ-ONLY API over the Atlas docs so the guide can
-open the source documents it cites, search them, and warn when they change.
+open the source documents it cites and search them.
 
 Security model (everything stays on this computer):
   * Listens on 127.0.0.1 only and rejects any request whose Host header is not local
@@ -12,9 +12,8 @@ Security model (everything stays on this computer):
   * Only these files can be read: docs/**/*.md|txt, AGENTS.md, README.md. Anything else,
     including source code, config, .env and key files, is refused. Symlinks that leave
     the repository are refused. Secret-looking values are redacted in what is returned.
-  * No outbound network access and no AI model is called. Only two small files are written, both in
-    .atlas-onboarding/state/: sources.lock.json (document hashes) and explorer-progress.json
-    (your progress).
+  * No outbound network access and no AI model is called. Only explorer-progress.json is written
+    in .atlas-onboarding/state/.
 """
 import argparse
 import hashlib
@@ -96,10 +95,6 @@ def redact(text):
     return "".join(parts)
 
 
-def sha(data):
-    return hashlib.sha256(data).hexdigest()[:16]
-
-
 def resolve_doc(rel):
     """Return (absolute Path, posix relative path) for an allowed doc, else None."""
     rel = (rel or "").replace("\\", "/").lstrip("/")
@@ -148,8 +143,70 @@ def read_doc(rel):
     return r[1], raw, raw.decode("utf-8-sig", errors="replace")
 
 
+def doc_fingerprint(text):
+    clean = "\n".join(line.rstrip() for line in text.replace("\r\n", "\n").split("\n")).strip()
+    return hashlib.sha256(clean.encode("utf-8")).hexdigest()[:16]
+
+
+def local_doc_changes():
+    baseline_path = HERE / "atlas-baseline.json"
+    if not baseline_path.is_file():
+        baseline_path = HERE.parent / "sync" / "baseline.json"
+    baseline = json.loads(baseline_path.read_text(encoding="utf-8"))
+    expected = baseline.get("files")
+    if expected is None:
+        return []
+    if not isinstance(expected, dict):
+        raise ValueError("Atlas docs inventory is missing or malformed")
+    history = baseline.get("changes", {})
+    if not isinstance(history, dict):
+        raise ValueError("Atlas docs change history is malformed")
+    for path, digest in expected.items():
+        if (not isinstance(path, str) or not path.startswith("docs/")
+                or ".." in path.replace("\\", "/").split("/") or not isinstance(digest, str)):
+            raise ValueError("Atlas docs inventory contains an invalid entry")
+
+    current = {}
+    root = ATLAS.resolve()
+    docs_root = root / "docs"
+    if docs_root.is_dir():
+        for path in sorted(docs_root.rglob("*")):
+            if path.is_symlink() or not path.is_file() or path.suffix.lower() not in (".md", ".txt"):
+                continue
+            try:
+                real = path.resolve(strict=True)
+                rel = real.relative_to(root).as_posix()
+            except (OSError, ValueError):
+                continue
+            current[rel] = doc_fingerprint(real.read_text(encoding="utf-8-sig", errors="replace"))
+
+    lessons_data = json.loads((HERE.parent / "lessons.json").read_text(encoding="utf-8"))
+    lesson_ids = {}
+    for lesson in lessons_data.get("lessons", []):
+        for source in lesson.get("sources", []):
+            path = source.get("path")
+            if isinstance(path, str):
+                lesson_ids.setdefault(path, []).append(lesson["id"])
+
+    changes = []
+    for path in sorted(set(expected) | set(current)):
+        if path not in expected or path not in current or expected[path] != current[path]:
+            status = history.get(path)
+            if status not in ("created", "modified", "deleted"):
+                if path not in expected:
+                    status = "local-only"
+                elif path not in current:
+                    status = "missing-locally"
+                else:
+                    status = "modified-locally"
+        else:
+            continue
+        changes.append({"path": path, "status": status, "lessons": lesson_ids.get(path, [])})
+    return changes
+
+
 def outline(text):
-    heads, first, in_code = [], "", False
+    heads, in_code = [], False
     for i, line in enumerate(text.splitlines(), 1):
         if line.strip().startswith("```"):
             in_code = not in_code
@@ -159,30 +216,7 @@ def outline(text):
         m = re.match(r"^(#{1,4})\s+(.*\S)", line)
         if m:
             heads.append({"level": len(m.group(1)), "text": m.group(2).strip("# ").strip(), "line": i})
-        elif not first and line.strip() and not line.startswith(("|", "-", "*", ">", "!", "[")) and heads:
-            first = line.strip()
-    return heads, first
-
-
-def plain(t):
-    t = re.sub(r"\[([^\]]+)\]\([^)]*\)", r"\1", t)
-    return re.sub(r"[*`_]{1,3}", "", t)
-
-
-def lock_path():
-    return STATE / "sources.lock.json"
-
-
-def load_lock():
-    try:
-        return json.loads(lock_path().read_text(encoding="utf-8"))
-    except (OSError, ValueError):
-        return None
-
-
-def save_lock(data):
-    STATE.mkdir(parents=True, exist_ok=True)
-    lock_path().write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    return heads
 
 
 ID_RE = re.compile(r"^[a-z0-9-]{1,64}$")
@@ -311,7 +345,7 @@ def search(q):
         if not hits:
             continue
         hits.sort(key=lambda h: (-h[0], h[1]))
-        title = redact(next((h["text"] for h in outline(doc[2])[0] if h["level"] == 1), rel))
+        title = redact(next((h["text"] for h in outline(doc[2]) if h["level"] == 1), rel))
         total = sum(h[0] for h in hits[:3]) + (3 if any(w in rel.lower() for w in qt) else 0)
         results.append({"score": total, "path": rel, "title": title,
                         "hits": [{"line": h[1], "text": redact(h[2])[:240]} for h in hits[:2]]})
@@ -367,7 +401,7 @@ class Handler(BaseHTTPRequestHandler):
         if not self._host_ok() or not self._api_ok():
             return self._json({"error": "forbidden"}, 403)
         u = urlparse(self.path)
-        if u.path not in ("/api/accept", "/api/progress"):
+        if u.path != "/api/progress":
             return self._json({"error": "not found"}, 404)
         try:
             n = min(int(self.headers.get("Content-Length") or 0), 65536)
@@ -383,21 +417,16 @@ class Handler(BaseHTTPRequestHandler):
                                             "explorer": load_progress()}, 409)
                     raise
                 return self._json({"ok": True, "atlas": str(ATLAS.resolve())})
-            paths = body.get("paths", [])
-            if not isinstance(paths, list):
-                raise ValueError
         except (ValueError, TypeError, OSError):
             return self._json({"error": "bad request"}, 400)
-        lock = load_lock() or {"hashes": {}}
-        for p in paths:
-            d = read_doc(str(p))
-            if d:
-                lock["hashes"][d[0]] = sha(d[1])
-        save_lock(lock)
-        self._json({"ok": True})
 
     def api_get(self, path, q):
         arg = lambda k: (q.get(k) or [""])[0]
+        if path == "/api/updates":
+            try:
+                return self._json({"documents": local_doc_changes()})
+            except (OSError, ValueError, TypeError, KeyError) as exc:
+                return self._json({"error": str(exc)}, 500)
         if path == "/api/health":
             root = ATLAS.resolve()
             return self._json({"ok": True, "docs": len(all_docs()), "atlasFolder": root.name, "atlas": str(root)})
@@ -405,32 +434,9 @@ class Handler(BaseHTTPRequestHandler):
             d = read_doc(arg("path"))
             if not d:
                 return self._json({"error": "not available"}, 404)
-            rel, raw, text = d
-            return self._json({"path": rel, "sha": sha(raw), "text": redact(text),
+            rel, _, text = d
+            return self._json({"path": rel, "text": redact(text),
                                "abs": str((ATLAS.resolve() / rel)).replace("\\", "/")})
-        if path == "/api/outline":
-            out = {}
-            lock = load_lock()
-            if lock is None:  # first run: current docs become the baseline
-                lock = {"hashes": {}}
-                for rel in all_docs():
-                    d = read_doc(rel)
-                    if d:
-                        lock["hashes"][rel] = sha(d[1])
-                save_lock(lock)
-            for p in [x for x in arg("paths").split("|") if x][:40]:
-                d = read_doc(p)
-                if not d:
-                    out[p] = {"status": "missing"}
-                    continue
-                heads, first = outline(d[2])
-                base = lock["hashes"].get(d[0])
-                shown = [{**h, "text": redact(h["text"])} for h in heads if h["level"] in (2, 3)][:8]
-                out[p] = {"status": "ok" if base in (None, sha(d[1])) else "changed", "sha": sha(d[1]),
-                          "title": redact(next((h["text"] for h in heads if h["level"] == 1), d[0])),
-                          "headings": shown,
-                          "summary": plain(redact(first))[:300]}
-            return self._json(out)
         if path == "/api/progress":
             return self._json({"atlas": str(ATLAS.resolve()), "explorer": load_progress()})
         if path == "/api/search":

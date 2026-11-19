@@ -104,6 +104,8 @@ Step 4 'Installing the visual guide (Atlas Explorer)'
 if ((Test-Path $explorerDest) -and -not (Test-ManagedExplorer)) {
   Fail "Atlas Explorer folder already exists and was not installed by this setup. Move '$explorerDest' aside and run setup again."
 }
+$baseline = Join-Path $here 'sync\baseline.json'
+if (-not (Test-Path $baseline)) { Fail "Atlas docs baseline is missing: $baseline" }
 $keep = Join-Path $env:TEMP ('atlas-shots-' + [guid]::NewGuid())
 $shots = Join-Path $explorerDest 'assets\screens'
 if (Test-Path $shots) { Copy-Item $shots $keep -Recurse -Force }   # keep screenshots added only on the Atlas side
@@ -111,6 +113,7 @@ if (Test-Path $explorerDest) { Remove-Item $explorerDest -Recurse -Force }
 New-Item -ItemType Directory -Force $explorerDest | Out-Null
 $src = Join-Path $here 'explorer'
 Copy-Item "$src\*" $explorerDest -Recurse -Force
+Copy-Item $baseline (Join-Path $explorerDest 'atlas-baseline.json') -Force
 Set-Content -Encoding ASCII -Path $markerFile -Value $marker
 if (Test-Path $keep) {   # put back only screenshots this package does not ship, so updated images always win
   Get-ChildItem $keep -File | Where-Object { -not (Test-Path (Join-Path $shots $_.Name)) } | Copy-Item -Destination $shots

@@ -23,6 +23,76 @@ server = load_server()
 
 
 class ExplorerServerTests(unittest.TestCase):
+    def test_local_doc_changes_lists_file_status_and_related_lessons(self):
+        folder = Path(tempfile.mkdtemp(prefix="explorer-updates-"))
+        self.addCleanup(lambda: shutil.rmtree(folder, ignore_errors=True))
+        atlas = folder / "atlas"
+        docs = atlas / "docs" / "projects"
+        docs.mkdir(parents=True)
+        (docs / "changed.md").write_text("New text", encoding="utf-8")
+        (docs / "created.md").write_text("New file", encoding="utf-8")
+        explorer = folder / "explorer"
+        explorer.mkdir()
+        (explorer / "atlas-baseline.json").write_text(json.dumps({
+            "files": {
+                "docs/projects/changed.md": server.doc_fingerprint("Old text"),
+                "docs/projects/deleted.md": server.doc_fingerprint("Removed file"),
+            },
+            "changes": {
+                "docs/projects/changed.md": "modified",
+                "docs/projects/created.md": "created",
+                "docs/projects/deleted.md": "deleted",
+            },
+        }), encoding="utf-8")
+        (folder / "lessons.json").write_text(json.dumps({"lessons": [
+            {"id": "example", "sources": [{"path": "docs/projects/changed.md"}]}
+        ]}), encoding="utf-8")
+
+        with mock.patch.object(server, "HERE", explorer), mock.patch.object(server, "ATLAS", atlas):
+            changes = server.local_doc_changes()
+
+        self.assertEqual([
+            {"path": "docs/projects/changed.md", "status": "modified", "lessons": ["example"]},
+            {"path": "docs/projects/created.md", "status": "created", "lessons": []},
+            {"path": "docs/projects/deleted.md", "status": "deleted", "lessons": []},
+        ], changes)
+
+    def test_local_doc_inventory_includes_files_larger_than_the_read_limit(self):
+        folder = Path(tempfile.mkdtemp(prefix="explorer-large-update-"))
+        self.addCleanup(lambda: shutil.rmtree(folder, ignore_errors=True))
+        atlas = folder / "atlas"
+        docs = atlas / "docs" / "projects"
+        docs.mkdir(parents=True)
+        text = "large documentation " * 60_000
+        path = docs / "large.md"
+        path.write_text(text, encoding="utf-8")
+        explorer = folder / "explorer"
+        explorer.mkdir()
+        (explorer / "atlas-baseline.json").write_text(json.dumps({
+            "files": {"docs/projects/large.md": server.doc_fingerprint(text)},
+            "changes": {},
+        }), encoding="utf-8")
+        (folder / "lessons.json").write_text(json.dumps({"lessons": []}), encoding="utf-8")
+
+        with mock.patch.object(server, "HERE", explorer), mock.patch.object(server, "ATLAS", atlas):
+            changes = server.local_doc_changes()
+
+        self.assertEqual([], changes)
+
+    def test_live_document_review_endpoints_are_removed(self):
+        handler = server.Handler.__new__(server.Handler)
+        handler._json = mock.Mock()
+
+        handler.api_get("/api/outline", {})
+        handler._json.assert_called_once_with({"error": "not found"}, 404)
+
+        handler._json.reset_mock()
+        handler._host_ok = lambda: True
+        handler._api_ok = lambda: True
+        handler.path = "/api/accept"
+        handler.do_POST()
+        handler._json.assert_called_once_with({"error": "not found"}, 404)
+
     def test_redacts_quoted_keys_values_and_headings(self):
         text = "\n".join([
             '# API key: "hunter2"',

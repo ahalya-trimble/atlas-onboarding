@@ -13,7 +13,6 @@
   const ALIAS = {}; D.lessons.forEach(l => (l.aliases || []).forEach(a => { ALIAS[a] = l.id; }));   // older lesson ids -> current id
   const byId = id => D.lessons.find(l => l.id === (ALIAS[id] || id));
   const srcOf = l => l.sources.map(s => s.path);
-  const secsOf = l => Object.fromEntries(l.sources.filter(s => s.sections.length).map(s => [s.path, s.sections]));
 
   let checkout = "";
   const emptyState = () => ({ done: {}, quiz: {}, xp: 0, unlock: false, profile: null, updatedAt: 0 });
@@ -221,7 +220,6 @@
       ${l.try ? `<div class="try"><b>Try it in your IDE:</b> ${md(l.try)}</div>` : ""}
       <h2 class="sec">Check yourself</h2><div class="quiz" data-quiz><p><b>${md(q.q)}</b></p>${q.o.map((o, i) => `<button class="opt" data-a="${i}">${esc(o)}</button>`).join("")}<div class="why" data-why></div></div>
             <h2 class="sec">Ask next <small>(click to copy, then paste into the ATLAS Tutor chat in VS Code)</small></h2><div class="prompts">${l.prompts.map(x => `<button class="prompt" data-copy="${esc((profileLine() ? profileLine() + " " : "") + x)}">${esc(x)}</button>`).join("")}</div>
-      <div class="live" data-live="${esc(srcOf(l).join("|"))}" data-secs="${esc(JSON.stringify(secsOf(l)))}"></div>
       <div class="src">Source-grounded in: ${srcOf(l).map(s => `<a class="srcl" href="#/doc/${encodeURI(s)}" title="Open this document"><code>${esc(s)}</code></a>`).join(" ")}<br><small>Drafted from repo docs. Verify against your Atlas revision. Anything marked "assumption" is not taken from a diagram.</small></div>
       <div class="foot">${prev ? `<a class="btn ghost" href="#/lesson/${prev.id}">&larr; ${esc(prev.title)}</a>` : "<span></span>"}
       <button class="btn big ${S.done[l.id] ? "ghost" : ""}" data-done="${l.id}">${S.done[l.id] ? "Completed (click to undo)" : "Mark as complete"}</button>
@@ -381,8 +379,6 @@
   }, () => { LIVE = false; });
   const q2 = p => encodeURIComponent(p);
 
-  const chipsFor = (heads, want) => { const w = (want || []).map(x => x.toLowerCase()); const m = heads.filter(h => w.includes(h.text.toLowerCase())); return m.length ? m : heads.slice(0, 6); };
-
   /* progress is kept in one local file on this computer (and in the browser as a backup) */
   let pushT = null, syncWarned = false;
   function applyState(next) {
@@ -417,24 +413,6 @@
       if (disk && diskT > localT) applyState(disk);
       else if ((!disk && localWork()) || localT > diskT) pushProgress();
     }).catch(() => toast("Could not read progress saved on this computer."));
-  }
-
-  function loadLive(el) {
-    if (!LIVE) { el.innerHTML = `<p class="mut">Start the guide with <code>Open Atlas Explorer.bat</code> to open the cited documents and see live updates.</p>`; return; }
-    const paths = el.dataset.live;
-    api("/api/outline?paths=" + q2(paths)).then(o => {
-      const secs = JSON.parse(el.dataset.secs || "{}");
-      const rows = Object.entries(o).map(([p, d]) => {
-        if (d.status === "missing") return `<div class="lrow bad"><b>${esc(p)}</b> <span class="lb bad">Missing in this Atlas revision</span></div>`;
-        const badge = d.status === "changed" ? `<span class="lb warn">Changed since you last reviewed</span>` : `<span class="lb ok">Up to date</span>`;
-        return `<div class="lrow"><a href="#/doc/${encodeURI(p)}"><b>${esc(d.title)}</b></a> ${badge}<div class="mut">${esc(p)}</div>${d.summary ? `<p>${esc(d.summary)}</p>` : ""}<div class="chips">${chipsFor(d.headings, secs[p]).map(h => `<a class="chip" href="#/doc/${encodeURI(p)}::${h.line}">${esc(h.text)}</a>`).join("")}</div></div>`;
-      }).join("");
-      const changed = Object.values(o).some(d => d.status === "changed");
-      el.innerHTML = `<h2 class="sec">Live from the Atlas docs</h2>${changed ? `<div class="drift">A source document changed after this lesson was written. Read the live text below, then mark it reviewed. The lesson wording above may be out of date.</div>` : ""}${rows}${changed ? `<button class="btn ghost" data-accept>Mark these documents as reviewed</button>` : ""}`;
-      const b = el.querySelector("[data-accept]");
-      if (b) b.onclick = () => api("/api/accept", { method: "POST", headers: { "X-Requested-With": "atlas-explorer", "Content-Type": "application/json" }, body: JSON.stringify({ paths: paths.split("|") }) }).then(() => { toast("Marked as reviewed"); loadLive(el); });
-      strip(el);
-    }).catch(() => { el.innerHTML = ""; });
   }
 
   function repoSearch(body, box) {
@@ -514,6 +492,46 @@
     wire(m); if (h.startsWith("doc/")) loadDoc(m, h.slice(4)); renderTop(); renderSide(); strip(m); strip($("#side")); strip($("#xp"));
   }
   function toast(t) { const e = $("#toast"); e.textContent = t; e.classList.add("show"); clearTimeout(toast.t); toast.t = setTimeout(() => e.classList.remove("show"), 1600); }
+  function showAtlasUpdates(documents) {
+    if (!documents.length) return;
+    const noticeId = JSON.stringify(documents.map(d => [d.path, d.status, d.lessons]));
+    const noticeKey = KEY + "-atlas-updates:" + checkout;
+    try { if (localStorage.getItem(noticeKey) === noticeId) return; } catch (e) {}
+    const labels = {
+      created: "Created in the reviewed Atlas docs",
+      modified: "Modified in the reviewed Atlas docs",
+      deleted: "Deleted from the reviewed Atlas docs",
+      "local-only": "Local-only file",
+      "missing-locally": "Missing locally",
+      "modified-locally": "Content differs locally"
+    };
+    const m = document.createElement("div"); m.className = "modal";
+    m.innerHTML = `<div class="dlg update-dlg" role="dialog" aria-modal="true" aria-labelledby="updates-title">
+      <h2 id="updates-title">Atlas docs differ from the reviewed version</h2>
+      <p class="mut">Pull the latest Atlas docs to your local checkout, then verify these files before relying on related lessons.</p>
+      <ul class="updates-list">${documents.map(d => `<li><b>${esc(labels[d.status] || "Changed")}</b> <a href="#/doc/${encodeURI(d.path)}" data-close><code>${esc(d.path)}</code></a><small>${d.lessons.length ? `Related lessons: ${d.lessons.map(esc).join(", ")}` : "No current lesson cites this file."}</small></li>`).join("")}</ul>
+      <button class="btn" data-close>Continue to Explorer</button></div>`;
+    document.body.appendChild(m);
+    const previous = document.activeElement, dialog = m.querySelector(".dlg");
+    const focusables = [...dialog.querySelectorAll("a, button")];
+    const close = () => { try { localStorage.setItem(noticeKey, noticeId); } catch (e) {} m.remove(); document.removeEventListener("keydown", onKey); if (previous && previous.focus) previous.focus(); };
+    const onKey = e => {
+      if (e.key === "Escape") { close(); return; }
+      if (e.key !== "Tab" || !focusables.length) return;
+      if (e.shiftKey && document.activeElement === focusables[0]) { e.preventDefault(); focusables[focusables.length - 1].focus(); }
+      else if (!e.shiftKey && document.activeElement === focusables[focusables.length - 1]) { e.preventDefault(); focusables[0].focus(); }
+    };
+    document.addEventListener("keydown", onKey);
+    m.querySelectorAll("[data-close]").forEach(el => el.addEventListener("click", close));
+    focusables[0].focus();
+  }
+  function loadAtlasUpdates() {
+    if (!LIVE) return;
+    api("/api/updates").then(data => {
+      if (!Array.isArray(data.documents)) throw new Error("Invalid Atlas update response");
+      showAtlasUpdates(data.documents);
+    }).catch(() => toast("Could not check Atlas docs for updates."));
+  }
   function copy(t) { (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(() => toast("Copied to clipboard"), () => { const a = document.createElement("textarea"); a.value = t; document.body.appendChild(a); a.select(); try { document.execCommand("copy"); toast("Copied to clipboard"); } catch (e) { } a.remove(); }); }
 
   function wire(root) {
@@ -521,7 +539,6 @@
     root.querySelectorAll(".pts li,.term,.tli,.tn,.quiz,.cmpc,.cmph,.prompt,.isle,.card,.vz,.hookbox,.vid,.sstep").forEach((e, i) => { e.classList.add("rv"); e.style.transitionDelay = (i % 6) * 50 + "ms"; io.observe(e); });
     root.querySelectorAll("[data-unlock]").forEach(a => a.onclick = e => { e.preventDefault(); S.unlock = true; save(); route(); });
     root.querySelectorAll("[data-copy]").forEach(b => b.onclick = () => copy(b.dataset.copy));
-    root.querySelectorAll("[data-live]").forEach(loadLive);
     root.querySelectorAll("[data-vid]").forEach(b => b.onclick = () => { b.parentNode.innerHTML = `<iframe src="https://drive.google.com/file/d/${b.dataset.vid}/preview" allow="autoplay; fullscreen" allowfullscreen title="Video"></iframe>`; });
     root.querySelectorAll("[data-local]").forEach(b => b.onclick = () => { b.parentNode.innerHTML = `<video src="${b.dataset.local}" controls autoplay playsinline title="Video"></video>`; });
     root.querySelectorAll("[data-steps]").forEach(w => {
@@ -558,6 +575,6 @@
   try { const t = localStorage.getItem(KEY + "-theme"); if (t) document.documentElement.dataset.theme = t; } catch (e) { }
   window.addEventListener("hashchange", route);
   document.addEventListener("error", e => { const t = e.target; if (t && t.tagName === "IMG" && t.parentNode) t.parentNode.classList.add("empty"); }, true);
-  askPanel(); hasApi().then(loadProgress).then(() => { route(); if (!S.profile && !S.skipProfile) profileModal(true); });
+  askPanel(); hasApi().then(loadProgress).then(() => { route(); loadAtlasUpdates(); if (!S.profile && !S.skipProfile) profileModal(true); });
   }
 })();
