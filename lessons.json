@@ -27,13 +27,20 @@
  "videos": {
   "atlas": {
    "id": "1LYCuUIvet4CP2KqKcTHEpp4qGj5KltOl",
+   "file": "assets/videos/Atlas_Onboarding.mp4",
    "title": "Atlas application overview",
    "note": "Knowledge-transfer walkthrough of the ATLAS desktop application."
   },
   "eatlas": {
    "id": "1IVR4C0UjNOVcN0zlUvf5MStrfJ2GKc6E",
+   "file": "assets/videos/eAtlas_Onboarding.mp4",
    "title": "eAtlas application overview",
    "note": "Introduction to eAtlas, Service Cases, Documentation and Application Routing Pages, Technical Data and Files, User Management & Access Control, Licenses and Training Data."
+  },
+  "bcs": {
+   "file": "assets/videos/BCS_Onboarding.mp4",
+   "title": "Baseline Calibration Software overview",
+   "note": "Onboarding walkthrough of BCS and the calibration workflow."
   },
   "architecture": {
    "file": "assets/videos/architecting-atlas.mp4",
@@ -165,7 +172,6 @@
      "Atlas overview: purpose, users and the technician workflow"
     ]
    },
-   "shot": "atlas-overview",
    "points": [
     "**Atlas** is an online **Service Repair Workflow** for **Authorized Service Technicians** of Trimble products.",
     "One-stop shop: repair guidance, service software (detectors/operations), warranty claims, **service cases**, service history.",
@@ -265,7 +271,6 @@
      ]
     }
    ],
-   "shot": "startup-navigation",
    "points": [
     "The installer puts **3 programs + 1 database** on the PC.",
     "Startup checks: **single instance**, **valid license + authorizations**, **MongoDB service running**.",
@@ -348,7 +353,10 @@
      }
     ]
    },
-   "shot": "license-activation",
+   "shot": [
+    "atlas-login",
+    "license-activation"
+   ],
    "points": [
     "**Authentication** – who are you? (Trimble Identity / Login Service).",
     "**Application license** – may THIS PC run Atlas? License Activation writes `AlmanacLicense.xml` to `%ProgramData%\\Trimble\\Almanac\\`.",
@@ -526,7 +534,6 @@
      }
     ]
    },
-   "shot": "service-case",
    "points": [
     "Service case = **accordion** of sections + a right-hand **Task list** (operations, parts, bulletins to perform).",
     "Footer buttons depend on license + case state: Submit DWCR, Submit Service-Support, Complete, Save, Generate Report, Sync SWO.",
@@ -892,7 +899,13 @@
      }
     ]
    },
-   "shot": "bcs",
+   "video": {
+    "key": "bcs",
+    "embed": true,
+    "chapters": [
+     "Baseline Calibration Software overview and workflow"
+    ]
+   },
    "points": [
     "Calibrates **X/SX** at **calibration sites**; external service-provider technicians and internal Trimble users can use it when their company has a ServiceProviders record.",
     "A daily **BCS sync job** drives monitoring/calibration alerts in Atlas.",
@@ -1249,7 +1262,6 @@
      "Service Cases"
     ]
    },
-   "shot": "eatlas-dashboard",
    "points": [
     "Web app for **service managers** and company users: company cases, licenses, assigning cases.",
     "Signs in with **Trimble Identity (OAuth2)** – not the OData token.",
@@ -1336,13 +1348,6 @@
       "t": "My Service Cases",
       "d": "Case shows up for the tech."
      }
-    ]
-   },
-   "video": {
-    "key": "eatlas",
-    "embed": true,
-    "chapters": [
-     "Service Cases"
     ]
    },
    "shot": "eatlas-assign",
@@ -1437,7 +1442,6 @@
      "Licenses and Training Data"
     ]
    },
-   "shot": "eatlas-content",
    "points": [
     "SPA routes: Dashboard, License, User admin/roles, Authorization, Manuals, Bulletins, GS info, Downloads, Labor time guide, Instrument constants.",
     "License page shows company licenses: holder, expiry, machine, activation code.",

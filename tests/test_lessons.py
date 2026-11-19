@@ -52,13 +52,19 @@ class LessonFileTests(unittest.TestCase):
                 self.assertIn(term, DATA["glossary"], f"{lesson['id']}: unknown term {term}")
 
     def test_videos_and_screenshots_exist_when_referenced(self):
+        for name, video in DATA["videos"].items():
+            if video.get("file"):
+                self.assertTrue((ROOT / "explorer" / video["file"]).is_file(),
+                                f"{name}: video {video['file']} is missing")
         for lesson in LESSONS:
             if lesson.get("video"):
                 self.assertIn(lesson["video"]["key"] if isinstance(lesson["video"], dict) else lesson["video"],
                               DATA["videos"], lesson["id"])
             if lesson.get("shot"):
-                self.assertTrue((ROOT / "explorer" / "assets" / "screens" / f"{lesson['shot']}.png").is_file(),
-                                f"{lesson['id']}: screenshot {lesson['shot']}.png is missing")
+                shots = lesson["shot"] if isinstance(lesson["shot"], list) else [lesson["shot"]]
+                for shot in shots:
+                    self.assertTrue((ROOT / "explorer" / "assets" / "screens" / f"{shot}.png").is_file(),
+                                    f"{lesson['id']}: screenshot {shot}.png is missing")
 
 
 if __name__ == "__main__":
