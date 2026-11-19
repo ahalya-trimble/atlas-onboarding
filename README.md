@@ -1,3 +1,4 @@
+
 # Atlas Onboarding
 
 Onboarding for the ATLAS desktop app and eAtlas web app. One install provides:
@@ -8,6 +9,8 @@ Onboarding for the ATLAS desktop app and eAtlas web app. One install provides:
 | **ATLAS Tutor** (agent) | Answers questions from the current Atlas documents and read-only source code, recaps earlier questions ("Revisit my learnings") and offers an optional recall quiz (`/quiz`). | VS Code Copilot Chat, or a Cursor rule |
 
 The Explorer teaches; the tutor answers.
+
+https://github.com/user-attachments/assets/05ff6dbd-c03b-49eb-9559-d1121d395ef9
 
 ## Contents
 
