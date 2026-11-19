@@ -254,6 +254,7 @@ class SyncTests(unittest.TestCase):
     def test_doc_inventory_reports_created_modified_and_deleted_files(self):
         baseline = {"files": {
             "docs/projects/a.md": sync.fingerprint(DOC),
+            "docs/projects/u.md": sync.fingerprint(UNCITED),
             "docs/projects/removed.md": "old-hash",
         }}
         self.doc.write_text(DOC.replace("Technicians.", "Technicians and managers."), encoding="utf-8")
@@ -270,7 +271,8 @@ class SyncTests(unittest.TestCase):
         created.write_text("# New doc\nNo lesson uses this yet.", encoding="utf-8")
         self.assertEqual(2, self.check())
         report = self.report_file.read_text(encoding="utf-8")
-        self.assertIn("created: `docs/projects/new.md`", report)
+        self.assertIn("### New files", report)
+        self.assertIn("`docs/projects/new.md`", report)
         self.assertNotIn("## Lessons to review", report)
 
     def test_files_only_accept_updates_inventory_not_lesson_sections(self):
@@ -282,6 +284,7 @@ class SyncTests(unittest.TestCase):
         self.assertEqual(before["docs"], after["docs"])
         self.assertIn("docs/projects/new.md", after["files"])
         self.assertEqual("created", after["changes"]["docs/projects/new.md"])
+        self.assertEqual(0, self.check())
 
     def test_report_contains_names_never_document_text(self):
         self.doc.write_text(DOC.replace("Technicians.", "SECRET-VALUE-123"), encoding="utf-8")
