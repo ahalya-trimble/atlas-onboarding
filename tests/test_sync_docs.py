@@ -251,6 +251,41 @@ class SyncTests(unittest.TestCase):
         self.assertIn("`docs/projects/a.md`: 'Who uses it' | lessons: `one`, `two`", report)
         self.assertIn("`docs/projects/u.md`: 'Release notes'", report)
 
+    def test_doc_inventory_reports_created_modified_and_deleted_files(self):
+        baseline = {"files": {
+            "docs/projects/a.md": sync.fingerprint(DOC),
+            "docs/projects/u.md": sync.fingerprint(UNCITED),
+            "docs/projects/removed.md": "old-hash",
+        }}
+        self.doc.write_text(DOC.replace("Technicians.", "Technicians and managers."), encoding="utf-8")
+        (self.atlas / "docs" / "projects" / "new.txt").write_text("New doc", encoding="utf-8")
+        changes = sync.compare_doc_files(self.atlas, baseline)
+        self.assertEqual([
+            {"path": "docs/projects/a.md", "status": "modified"},
+            {"path": "docs/projects/new.txt", "status": "created"},
+            {"path": "docs/projects/removed.md", "status": "deleted"},
+        ], changes)
+
+    def test_docs_only_drift_is_reported_without_marking_lessons_stale(self):
+        created = self.atlas / "docs" / "projects" / "new.md"
+        created.write_text("# New doc\nNo lesson uses this yet.", encoding="utf-8")
+        self.assertEqual(2, self.check())
+        report = self.report_file.read_text(encoding="utf-8")
+        self.assertIn("### New files", report)
+        self.assertIn("`docs/projects/new.md`", report)
+        self.assertNotIn("## Lessons to review", report)
+
+    def test_files_only_accept_updates_inventory_not_lesson_sections(self):
+        before = json.loads(self.baseline_file.read_text(encoding="utf-8"))
+        (self.atlas / "docs" / "projects" / "new.md").write_text("# New", encoding="utf-8")
+        result = self.run_quiet(sync.cmd_accept, self.atlas, CURRICULUM, None, False, False, True)
+        after = json.loads(self.baseline_file.read_text(encoding="utf-8"))
+        self.assertEqual(0, result)
+        self.assertEqual(before["docs"], after["docs"])
+        self.assertIn("docs/projects/new.md", after["files"])
+        self.assertEqual("created", after["changes"]["docs/projects/new.md"])
+        self.assertEqual(0, self.check())
+
     def test_report_contains_names_never_document_text(self):
         self.doc.write_text(DOC.replace("Technicians.", "SECRET-VALUE-123"), encoding="utf-8")
         self.uncited.write_text(UNCITED.replace("First release.", "SECRET-VALUE-456"), encoding="utf-8")

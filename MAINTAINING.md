@@ -58,6 +58,8 @@ afterwards compares every document.
 
 Both paths follow [AGENTS.md](./AGENTS.md). One bot branch, one open fallback issue and a concurrency lock prevent
 overlapping runs. Changes reach the default branch only through a reviewed pull request.
+After merge, Explorer compares local `docs/**/*.md` and `docs/**/*.txt` files with the checked-in inventory. It alerts
+learners about mismatches and related lessons; learners pull Atlas docs themselves.
 
 ## Learner updates
 
@@ -76,7 +78,8 @@ Cursor's `@atlas-onboarding` rule checks once per chat; Copilot users update thr
 3. Allow GitHub Actions to create pull requests. Create the `content-drift` issue label.
 4. Protect the default branch: require a pull request, one approval and the `CI / unit-tests` check.
 5. Merge the workflow and related files to the default branch.
-6. Run **Weekly lesson sync** with `init_baseline` checked, then merge its baseline pull request.
+6. Run **Weekly lesson sync** with `init_baseline` checked, then merge its baseline pull request. This records the
+   docs file inventory used by Explorer's local-update alert.
 
 ## Verify the workflow
 

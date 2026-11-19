@@ -9,17 +9,13 @@ Frames from the Atlas, BCS and eAtlas walkthrough recordings, shown as recorded:
 
 | File | Lesson |
 |---|---|
-| `atlas-overview.png` | What is ATLAS? |
 | `startup-navigation.png` | Install, startup & navigation |
 | `license-activation.png` | Sign-in vs. license vs. authorization |
+| `atlas-login.png` | Sign-in vs. license vs. authorization |
 | `product-details.png` | The technician workflow, step by step |
-| `service-case.png` | Inside a service case |
 | `bulletins.png` | Manuals, bulletins & downloads |
 | `operations.png` | Detectors & service operations (plugins) |
-| `bcs.png` | Baseline Calibration (BCS) |
-| `eatlas-dashboard.png` | What is eAtlas? |
 | `eatlas-assign.png` | Assigning cases |
-| `eatlas-content.png` | Content, users & authorizations |
 | `licenses.png` | Two kinds of license |
 | `constants.png` | Instrument constants pipeline |
 
