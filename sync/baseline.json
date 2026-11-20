@@ -1,6 +1,7 @@
 {
  "atlasBranch": "Release",
  "atlasCommit": "788f40f",
+ "changes": {},
  "docs": {
   "AGENTS.md": {
    "hash": "02d8c427bc52ff7b",
@@ -308,6 +309,30 @@
    }
   }
  },
- "recorded": "2026-11-17",
+ "files": {
+  "docs/Functionality/bcs-notifications.md": "896b5b263a930c59",
+  "docs/Functionality/dwcr-request-reasons.md": "8164a4b26d1fb6a8",
+  "docs/README.md": "6ef165118a8e72d5",
+  "docs/cloud migration/ATLAS-5910-SEP-API-GraphQL-WAF.md": "6aa61e98e9a2b9e8",
+  "docs/cloud migration/ATLAS-6528-OData-Azure-WAF-Prevention-Workaround.md": "76a67bd5556f012b",
+  "docs/cloud migration/ATLAS-6528-eAtlas-Azure-WAF-Prevention-fixes.md": "9abf3d1ad599948c",
+  "docs/projects/01-atlas-application.md": "5d53b919a34f10f9",
+  "docs/projects/02-odata-service.md": "098998d02600c71e",
+  "docs/projects/03-eatlas.md": "2f8b91bf9b17b1b6",
+  "docs/projects/04-baseline-calibration-software.md": "4ab9887e77272be4",
+  "docs/projects/05-license-activation.md": "9cd6d95570df2f1b",
+  "docs/projects/06-reset-almanac-offline.md": "2e7188626f7c3979",
+  "docs/projects/07-almanac-api.md": "0fa2457e9f89f23d",
+  "docs/projects/08-atlas-twod-master-data-sync.md": "0c5e16d71ca48825",
+  "docs/projects/09-atlas-ems-licensing.md": "23816395dd56b0d3",
+  "docs/projects/10-license-generator-service.md": "9b6b52aa1a95b934",
+  "docs/projects/11-atlas-file-system-watcher.md": "10e718c30416fcd7",
+  "docs/projects/12-file-comparer.md": "7f536ece5a60198c",
+  "docs/projects/13-service-bulletin-notification.md": "82a12ed58fe69198",
+  "docs/projects/14-atlas-ai-sync-service.md": "00ac85b8e1e22b26",
+  "docs/projects/15-atlas-global-service.md": "39e6c24422a0f055",
+  "docs/projects/16-atlas-environment-switch.md": "e9b6531236d641d4"
+ },
+ "recorded": "2026-11-20",
  "version": 1
 }
